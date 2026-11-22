@@ -197,6 +197,13 @@ function interview() {
   log.setAttribute("role", "log");
   log.setAttribute("aria-label", "Patient conversation");
   log.tabIndex = 0;
+  const opening = element("div", "", "chat-turn");
+  opening.append(
+    chatMessage("You", clinicalCase.greeting, "learner"),
+    chatMessage(clinicalCase.patient, clinicalCase.opening, "patient")
+  );
+  log.append(opening);
+  interviewTurns.push({ question: clinicalCase.greeting, reply: clinicalCase.opening, automatic: true });
   const composer = element("form", "", "chat-composer");
   const draft = element("textarea");
   draft.id = "draft";
@@ -244,7 +251,7 @@ function interview() {
     interviewTurns.push({ question, reply, verdict, explanation });
   }
 
-  async function sendQuestion(question, opening = false) {
+  async function sendQuestion(question) {
     if (!question || pending || !chatKey) return;
     const { turn, waiting } = sentMessage(log, question, "Sarah is typing…");
     draft.value = "";
@@ -261,18 +268,17 @@ function interview() {
       const review = answer.kind === "review" || items.some(item => item.kind === "review");
       let verdict;
       let explanation;
-      if (!opening && answer.kind === "off_topic") {
+      if (answer.kind === "off_topic") {
         verdict = "Off-topic question";
         explanation = "Return to Sarah’s concern.";
-      } else if (!opening && review) {
+      } else if (review) {
         verdict = "Reconsider this question";
         explanation = "Ask what Sarah has noticed without suggesting the answer.";
-      } else if (!opening && items.length) {
+      } else if (items.length) {
         verdict = "Appropriate question";
         explanation = items.map(item => item.feedback).join(" ");
       }
       addTurn(turn, question, answer.reply, verdict, explanation);
-      if (opening) interviewTurns.at(-1).automatic = true;
       if (!review) {
         for (const item of items) seenHistory.set(item.id, item);
       }
@@ -295,13 +301,12 @@ function interview() {
   composer.addEventListener("submit", event => {
     event.preventDefault();
     const question = draft.value.trim();
-    return sendQuestion(question, !interviewTurns.length && question === clinicalCase.greeting);
+    return sendQuestion(question);
   });
 
   composer.append(draft, send);
   scene.append(header, log, composer, turnStatus, end);
   showSuggestions();
-  sendQuestion(clinicalCase.greeting, true);
 }
 
 function enterToSend(input, form) {

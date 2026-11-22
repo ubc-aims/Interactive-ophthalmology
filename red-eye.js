@@ -5,6 +5,7 @@ const clinicalCase = {
   patientSummary: "32-year-old female",
   presentingComplaint: "red eye",
   greeting: "Hi, how are you doing?",
+  opening: "Hi, I’m okay, thanks. I came in because my right eye is red.",
   history: [
     {
       id: "onset",
