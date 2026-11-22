@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Red Eye | Interactive Ophthalmology</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="red-eye.js" defer></script>
+  <script src="case.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell header-row">
+      <strong class="brand">Interactive Ophthalmology</strong>
+      <button id="theme" type="button">Switch theme</button>
+    </div>
+  </header>
+  <main class="shell">
+    <div class="intro">
+      <p class="eyebrow">Clinical skills practice</p>
+      <h1>The Red Eye</h1>
+      <p>Interview a patient, examine the eye, and decide what to do next.</p>
+    </div>
+    <nav id="stages" aria-label="Case stages"></nav>
+    <div class="layout">
+      <section id="scene" class="card" aria-labelledby="scene-title"></section>
+      <aside id="notes" class="card" aria-labelledby="notes-title"></aside>
+    </div>
+    <noscript>Enable JavaScript to start the case.</noscript>
+  </main>
+</body>
+</html>
