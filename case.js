@@ -138,7 +138,10 @@ function interview() {
   log.setAttribute("aria-label", "Patient conversation");
   log.tabIndex = 0;
   const opening = element("div", "", "chat-turn");
-  opening.append(chatMessage(clinicalCase.patient, clinicalCase.opening, "patient"));
+  opening.append(
+    chatMessage("You", clinicalCase.greeting, "learner"),
+    chatMessage(clinicalCase.patient, clinicalCase.opening, "patient")
+  );
   log.append(opening);
 
   const composer = element("form", "", "chat-composer");
@@ -255,7 +258,7 @@ function interview() {
         waiting.remove();
         applyAnswer(turn, question, [choice], choice.kind || "appropriate");
       } else {
-        const result = await interpretPatientQuestion(chatKey, question, options, interviewTurns, steps[0].objective);
+        const result = await interpretPatientQuestion(chatKey, question, options, [{ question: clinicalCase.greeting, reply: clinicalCase.opening }, ...interviewTurns], steps[0].objective);
         const items = result.ids.map(id => options.find(item => item.id === id));
         const kind = items.some(item => item.kind === "review") ? "review" : result.kind;
         waiting.remove();
@@ -560,7 +563,7 @@ function renderNotes() {
   const transcript = notesSection("transcript", "Interview transcript", false);
   transcript.parentElement.hidden = step === 0;
   const entries = element("dl", "", "clinical-finding");
-  entries.append(element("dt", clinicalCase.patient), element("dd", clinicalCase.opening));
+  entries.append(element("dt", clinicalCase.greeting), element("dd", clinicalCase.opening));
   for (const { question, reply } of interviewTurns) {
     entries.append(element("dt", question), element("dd", reply));
   }

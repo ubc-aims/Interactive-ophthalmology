@@ -3,7 +3,8 @@
 const clinicalCase = {
   patient: "Sarah",
   patientSummary: "32-year-old female · Red eye",
-  opening: "Hi.",
+  greeting: "Hi, how are you doing?",
+  opening: "Hi. I’m doing okay, thanks. I came in because my right eye is red today.",
   reason: {
     id: "reason_for_visit",
     question: "What brings you in today?",
