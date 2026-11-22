@@ -603,7 +603,7 @@ function discussion(phase) {
   status.setAttribute("role", "status");
   const proceed = button(isPreceptor ? "Finish presentation" : "Finish counselling", "secondary", next);
   const end = element("div", "", "stage-end");
-  proceed.disabled = true;
+  proceed.disabled = !isPreceptor;
   const request = isPreceptor ? null : button("Request feedback", "secondary", () => showFeedback("counselling"));
   if (request) end.append(request);
   end.append(proceed);
@@ -634,11 +634,11 @@ function discussion(phase) {
         : { ...await respondAsPatient(chatKey, text, [], [
           ...(counsellingOpening ? [{ question: "", reply: counsellingOpening }] : []),
           ...transcript
-        ], "counselling"), ready: true };
+        ], "counselling") };
       transcript.push({ question: text, reply: reply.reply });
       waiting.remove();
       turn.append(chatMessage(speaker, reply.reply, "patient"));
-      ready = reply.ready;
+      ready = true;
       log.scrollTop = log.scrollHeight;
       status.textContent = "";
     } catch (error) {
@@ -647,7 +647,8 @@ function discussion(phase) {
       status.textContent = error.message;
     } finally {
       pending = false;
-      proceed.disabled = !ready;
+      // Only a pending reply can temporarily block finishing the preceptor station.
+      proceed.disabled = !isPreceptor && !ready;
       if (request) request.disabled = false;
       draft.readOnly = false;
       send.disabled = !draft.value.trim();
