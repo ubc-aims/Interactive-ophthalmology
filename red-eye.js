@@ -64,12 +64,12 @@ const clinicalCase = {
     },
     {
       id: "lid_bump",
-      label: "Lid bump time course and tenderness",
+      label: "Lid bump location, timing and tenderness",
       priority: false,
       questions: [
-        { id: "bump_timing", question: "When did you first notice the bump?", note: "Right upper lid bump noticed about two weeks ago.", feedback: "The bump’s time course helps distinguish a recent tender lesion from a longer-standing lump." },
+        { id: "bump_timing", question: "When did you first notice the bump?", note: "Noticed the bump about two weeks ago.", feedback: "The bump’s time course helps distinguish a recent tender lesion from a longer-standing lump." },
         { id: "bump_tenderness", question: "Was it sore at first, and is it still sore now?", note: "Initially tender, now minimally tender by history.", feedback: "A bump that has become less tender supports a different lid process than one that remains acutely sore." },
-        { id: "bump_location_follow", requires: "bump_timing", question: "Is the bump right at the lashes or a bit higher up?", note: "Patient locates the bump above the lash line.", feedback: "The location helps connect the history with the lid examination." }
+        { id: "bump_location_follow", question: "Can you point to where you noticed the bump?", note: "If asked to point to the bump, Sarah indicates her right upper eyelid. She cannot tell where it sits relative to her eyelashes.", feedback: "Ask the patient to point to the area. The examination can then establish the lump’s exact location." }
       ]
     },
     {
