@@ -37,10 +37,9 @@ const feedbackLabels = {
 };
 const discussionOpenings = {
   preceptor: "Hi, how are you doing? Tell me about your patient.",
-  counselling: "What do you think the bump is? What should I do about it?"
 };
 
-let step, seenHistory, seenExam, interviewTurns, manualChecks, assessments, activeHints, examInterpretations, counsellingTurns, preceptorTurns, feedbackRequests;
+let step, seenHistory, seenExam, interviewTurns, manualChecks, assessments, activeHints, examInterpretations, counsellingTurns, counsellingOpening, preceptorTurns, feedbackRequests;
 let chatKey;
 
 function element(tag, text, className) {
@@ -65,6 +64,7 @@ function start() {
   seenExam = new Map();
   examInterpretations = new Map();
   counsellingTurns = [];
+  counsellingOpening = "";
   preceptorTurns = [];
   feedbackRequests = new Map();
   observationInput.value = "";
@@ -197,13 +197,6 @@ function interview() {
   log.setAttribute("role", "log");
   log.setAttribute("aria-label", "Patient conversation");
   log.tabIndex = 0;
-  const opening = element("div", "", "chat-turn");
-  opening.append(
-    chatMessage("You", clinicalCase.greeting, "learner"),
-    chatMessage(clinicalCase.patient, clinicalCase.opening, "patient")
-  );
-  log.append(opening);
-
   const composer = element("form", "", "chat-composer");
   const draft = element("textarea");
   draft.id = "draft";
@@ -218,14 +211,12 @@ function interview() {
   const proceed = button("Finish history", "secondary", next);
   const end = element("div", "", "stage-end");
   end.append(button("Request feedback", "secondary", () => showFeedback("history")), proceed);
-  const options = [clinicalCase.reason, clinicalCase.story, ...clinicalCase.history.flatMap(topic => topic.questions)];
-  let selected;
+  const options = clinicalCase.history.flatMap(topic => topic.questions);
   let pending = false;
   const turnStatus = element("p", "", "chat-status");
   turnStatus.setAttribute("role", "status");
 
   draft.addEventListener("input", () => {
-    selected = undefined;
     send.disabled = !draft.value.trim() || pending;
   });
   enterToSend(draft, composer);
@@ -238,7 +229,6 @@ function interview() {
     function choice(item) {
       return button(item.question, "suggestion", () => {
         if (pending) return;
-        selected = item;
         draft.value = item.question;
         send.disabled = false;
         draft.focus();
@@ -254,50 +244,9 @@ function interview() {
     interviewTurns.push({ question, reply, verdict, explanation });
   }
 
-  function applyAnswer(turn, question, items, kind) {
-    if (kind === "off_topic") {
-      addTurn(turn, question, "I came in because my eye keeps getting red.",
-        "Off-topic question", "Keep the conversation on Sarah’s concern, or ask what she has noticed.");
-      return;
-    }
-    if (items.length === 1 && items[0].opening && kind === "appropriate") {
-      addTurn(turn, question, items[0].reply);
-      return;
-    }
-    const review = kind === "review";
-    const reply = items.map(item => item.reply).join(" ");
-    const verdict = review ? "Reconsider this question"
-      : items.some(item => item.requires) ? "Appropriate follow-up" : "Appropriate question";
-    const explanation = review && items.every(item => item.kind !== "review")
-      ? "Ask what Sarah has noticed and give her room to answer before drawing a conclusion."
-      : items.filter(item => !item.opening).map(item => item.feedback).join(" ");
-    addTurn(turn, question, reply, verdict, explanation);
-    if (!review) {
-      for (const item of items.filter(item => !item.opening)) {
-        if (item.reveals) {
-          for (const id of item.reveals) {
-            const domain = options.find(option => option.id === id);
-            const note = id === "onset_side" ? "Redness mainly in the right eye." : "Intermittent redness for a few weeks.";
-            if (!seenHistory.has(id)) seenHistory.set(id, { ...domain, note });
-          }
-        } else {
-          seenHistory.set(item.id, item);
-        }
-      }
-    } else {
-      for (const item of items.filter(item => item.kind === "review")) seenHistory.set(item.id, item);
-    }
-    showSuggestions(items.map(item => item.id));
-    renderNotes();
-  }
-
-  composer.addEventListener("submit", async event => {
-    event.preventDefault();
-    const question = draft.value.trim();
+  async function sendQuestion(question, opening = false) {
     if (!question || pending || !chatKey) return;
-    const choice = selected;
     const { turn, waiting } = sentMessage(log, question, "Sarah is typing…");
-    selected = undefined;
     draft.value = "";
     send.disabled = true;
     pending = true;
@@ -306,30 +255,33 @@ function interview() {
     draft.readOnly = true;
     turnStatus.textContent = "";
     try {
-      const greeting = /^(?:(?:hi|hello|hey)(?:[,!.]\s*|\s+))?(?:how are you(?: doing)?(?: today)?)[?.!]*$|^(?:hi|hello|hey)[!.]*$/i.test(question);
-      const invitesStory = /^(?:(?:can|could|would) you )?(?:describe (?:it|that|the redness)(?: to me)?|tell me (?:a (?:little|bit) )?more(?: about (?:it|that|the redness|your eye))?|elaborate|go on|say more|explain (?:it|that)(?: to me)?)[?.!]*$/i.test(question);
-      if (greeting) {
-        waiting.remove();
-        addTurn(turn, question, "Hi! I’m doing great, thanks.");
-      } else if (/^[?!.]+$/.test(question) || (invitesStory &&
-        (!interviewTurns.length || interviewTurns.at(-1).reply === clinicalCase.reason.reply))) {
-        waiting.remove();
-        applyAnswer(turn, question, [clinicalCase.story], "appropriate");
-      } else if (choice) {
-        waiting.remove();
-        applyAnswer(turn, question, [choice], choice.kind || "appropriate");
-      } else {
-        const result = await interpretPatientQuestion(chatKey, question, options, [{ question: clinicalCase.greeting, reply: clinicalCase.opening }, ...interviewTurns], steps[0].objective);
-        const items = result.ids.map(id => options.find(item => item.id === id));
-        const kind = items.some(item => item.kind === "review") ? "review" : result.kind;
-        waiting.remove();
-        applyAnswer(turn, question, items, kind);
+      const answer = await respondAsPatient(chatKey, question, options, interviewTurns);
+      waiting.remove();
+      const items = answer.ids.map(id => options.find(item => item.id === id));
+      const review = answer.kind === "review" || items.some(item => item.kind === "review");
+      let verdict;
+      let explanation;
+      if (!opening && answer.kind === "off_topic") {
+        verdict = "Off-topic question";
+        explanation = "Return to Sarah’s concern.";
+      } else if (!opening && review) {
+        verdict = "Reconsider this question";
+        explanation = "Ask what Sarah has noticed without suggesting the answer.";
+      } else if (!opening && items.length) {
+        verdict = "Appropriate question";
+        explanation = items.map(item => item.feedback).join(" ");
       }
+      addTurn(turn, question, answer.reply, verdict, explanation);
+      if (opening) interviewTurns.at(-1).automatic = true;
+      if (!review) {
+        for (const item of items) seenHistory.set(item.id, item);
+      }
+      showSuggestions(answer.ids);
+      renderNotes();
     } catch (error) {
       turn.remove();
       turnStatus.textContent = error.message;
       draft.value = question;
-      selected = choice;
     } finally {
       pending = false;
       draft.readOnly = false;
@@ -338,11 +290,18 @@ function interview() {
       send.disabled = !draft.value.trim();
       draft.focus();
     }
+  }
+
+  composer.addEventListener("submit", event => {
+    event.preventDefault();
+    const question = draft.value.trim();
+    return sendQuestion(question, !interviewTurns.length && question === clinicalCase.greeting);
   });
 
   composer.append(draft, send);
   scene.append(header, log, composer, turnStatus, end);
   showSuggestions();
+  sendQuestion(clinicalCase.greeting, true);
 }
 
 function enterToSend(input, form) {
@@ -402,14 +361,14 @@ function historyFeedback(onReady) {
     panel.append(element("p", "Next time, ask: “" + question.question + "”"));
   }
 
-  if (!interviewTurns.length) {
+  if (!interviewTurns.some(turn => !turn.automatic)) {
     status.textContent = "No questions were sent during the history.";
     onReady();
     return panel;
   }
   status.textContent = "Reviewing the history against the rubric…";
   const transcript = interviewTurns.map(({ question, reply }) => ({ question, reply }));
-  const learnerText = transcript.map(turn => "Learner: " + turn.question).join("\n");
+  const learnerText = interviewTurns.filter(turn => !turn.automatic).map(turn => "Learner: " + turn.question).join("\n");
   assessOnce("history", learnerText, {
     objective: steps[0].objective,
     transcript,
@@ -529,6 +488,8 @@ function showFeedback(phase, afterStation = false) {
     requestAssessment("counselling", counsellingTurns.map(turn => turn.question).join("\n"), {
       objective: steps[3].objective,
       plan: clinicalCase.checkpoints.plan.modelResponse,
+      counselling_reference: clinicalStandard.counsellingReference,
+      patient_opening: counsellingOpening,
       transcript: counsellingTurns
     }, onReady);
   }
@@ -577,21 +538,6 @@ function requestAssessment(phase, text, evidence, onReady) {
   }).finally(onReady);
 }
 
-function counsellingReply(text) {
-  if (/in your own words|teach[ -]?back|tell me what you(?:’|')ll do|tell me what you will do/i.test(text)) {
-    const explained = [...counsellingTurns.map(turn => turn.question), text].join(" ");
-    if (/warm compress|warm (?:cloth|towel)/i.test(explained)) {
-      return "I’ll put a warm cloth on the lid. I’m still a little unsure when I should come back.";
-    }
-    return "I’m still not sure what to do for the bump when I get home. Could we go over that?";
-  }
-  return [
-    "What should I do when I get home?",
-    "When should I come back or get help sooner?",
-    "Okay, that helps. Is there anything else I should know?"
-  ][Math.min(counsellingTurns.length, 2)];
-}
-
 function discussion(phase) {
   const isPreceptor = phase === "preceptor";
   const speaker = isPreceptor ? "Preceptor" : clinicalCase.patient;
@@ -604,7 +550,7 @@ function discussion(phase) {
   const log = element("div", "", "chat-log");
   log.setAttribute("role", "log");
   log.setAttribute("aria-label", "Conversation with " + speaker);
-  log.append(chatMessage(speaker, opening, "patient"));
+  if (opening) log.append(chatMessage(speaker, opening, "patient"));
   const composer = element("form", "", "chat-composer");
   const draft = element("textarea");
   draft.rows = 1;
@@ -645,7 +591,10 @@ function discussion(phase) {
           history: [...seenHistory.values()].filter(item => item.kind !== "review").map(item => item.note),
           examination: examEvidence().selected
         })
-        : { reply: counsellingReply(text), ready: true };
+        : { ...await respondAsPatient(chatKey, text, [], [
+          ...(counsellingOpening ? [{ question: "", reply: counsellingOpening }] : []),
+          ...transcript
+        ], "counselling"), ready: true };
       transcript.push({ question: text, reply: reply.reply });
       waiting.remove();
       turn.append(chatMessage(speaker, reply.reply, "patient"));
@@ -674,6 +623,26 @@ function discussion(phase) {
   activeHints = hints;
   composer.append(draft, send);
   scene.append(header, stageObjective(), log, composer, status, end);
+  if (!isPreceptor) {
+    const waiting = element("p", "Sarah is typing…", "typing-indicator");
+    waiting.setAttribute("role", "status");
+    log.append(waiting);
+    pending = true;
+    draft.readOnly = true;
+    request.disabled = true;
+    respondAsPatient(chatKey, "", [], [], "counselling").then(answer => {
+      counsellingOpening = answer.reply;
+      log.append(chatMessage(speaker, answer.reply, "patient"));
+    }).catch(error => {
+      status.textContent = error.message;
+    }).finally(() => {
+      waiting.remove();
+      pending = false;
+      draft.readOnly = false;
+      request.disabled = false;
+      draft.focus();
+    });
+  }
 }
 
 function assessmentDisplay(phase, feedback) {
@@ -741,7 +710,7 @@ function renderNotes() {
   const transcript = notesSection("transcript", "Interview transcript", false);
   transcript.parentElement.hidden = step <= 0;
   const entries = element("dl", "", "clinical-finding");
-  entries.append(element("dt", clinicalCase.greeting), element("dd", clinicalCase.opening));
+
   for (const { question, reply } of interviewTurns) {
     entries.append(element("dt", question), element("dd", reply));
   }
@@ -788,7 +757,7 @@ function transcriptDisplay(title, speaker, opening, turns, open = false) {
 
 function caseReport() {
   const examination = examEvidence();
-  const historyTranscript = [["You", clinicalCase.greeting], ...transcriptEntries(clinicalCase.patient, clinicalCase.opening, interviewTurns)];
+  const historyTranscript = transcriptEntries(clinicalCase.patient, "", interviewTurns);
   const examRows = examination.selected.map(({ label, finding, interpretation }) => [
     label,
     finding + (interpretation.trim() ? "\nYour interpretation: " + interpretation.trim() : "")
@@ -798,7 +767,7 @@ function caseReport() {
     ["History transcript", historyTranscript],
     ["Examination record", examRows],
     ["Preceptor transcript", transcriptEntries("Preceptor", discussionOpenings.preceptor, preceptorTurns)],
-    ["Counselling transcript", transcriptEntries(clinicalCase.patient, discussionOpenings.counselling, counsellingTurns)]
+    ["Counselling transcript", transcriptEntries(clinicalCase.patient, counsellingOpening, counsellingTurns)]
   ];
   const labels = { met: "Met", partial: "Develop further", missing: "Missing" };
   for (const phase of ["history", "examination", "counselling"]) {
