@@ -4,7 +4,7 @@ Open [index.html](index.html) in a browser to run the case locally. The case use
 
 ## Reuse the template
 
-- Edit [red-eye.js](red-eye.js) to change the opening, interview topics, exam findings, checkpoints, and debrief. An interview topic can have a `follow` question, which appears after that topic is selected. Give each topic and exam finding its own ID.
+- Edit [red-eye.js](red-eye.js) to change the opening, interview topics, exam findings, checkpoints, and debrief. Each history topic has question objects with a patient reply, chart note, and coaching feedback. A question with `requires` becomes available after its prerequisite question is sent. A question marked `kind: "review"` provides corrective feedback and leaves the checklist open. Give each topic, question, and exam finding its own ID.
 - Each checkpoint has answer choices with IDs and a list of correct IDs. One correct ID produces radio buttons. Multiple correct IDs produce checkboxes. Single-answer choices carry their own explanations. A multi-answer checkpoint uses one shared explanation.
 - Edit the stage list in [case.js](case.js) to change when a checkpoint appears. Update the title and introduction in [index.html](index.html) when starting a different case.
 
@@ -17,3 +17,10 @@ The supplied Sarah Thomas captures informed the lid and ocular surface presentat
 - EyeWiki’s **Chemical Injuries** section directs clinicians to “begin copious irrigation immediately” for isolated chemical exposure and gives a separate exception for suspected open globe. The triage table lists bacterial keratitis, acute anterior uveitis, and acute angle closure as urgent. [EyeWiki on-call triage](https://eyewiki.aao.org/On_Call_Ophthalmology)
 - The differential uses ocular itch and discharge patterns from **Physical Examination** in the conjunctivitis entry, plus pain, light sensitivity, and anterior chamber inflammation from **Disease** in the anterior uveitis entry. These are clues to localize disease. [EyeWiki on conjunctivitis](https://eyewiki.org/Conjunctivitis) · [EyeWiki on anterior uveitis](https://eyewiki.org/Acute_Anterior_Uveitis)
 - The MSD Manual notes that a chalazion can become a “small nontender nodule in the eyelid center” and lists “Warm compresses” in **Treatment of Chalazion and Hordeolum**. Its **Diagnosis** section supports reassessment of a lesion that persists despite treatment. [MSD Manual on chalazion and hordeolum](https://www.msdmanuals.com/professional/eye-disorders/eyelid-and-lacrimal-disorders/chalazion-and-hordeolum-stye)
+
+## Examination photos
+
+The lid examination uses two original University of Iowa EyeRounds atlas images, shown at their original aspect ratios as teaching examples. The module links to the atlas if an image is unavailable. Both photos are licensed [CC BY-NC-ND 3.0](https://creativecommons.org/licenses/by-nc-nd/3.0/).
+
+- Jordan Graff, MD. [Lid contour photograph](https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/Chalazion-2-.html)
+- Cindy Montague, CRA (photographer), and Jesse Vislisel, MD (contributor). [Lash base photograph](https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/blepharitis/index.htm)

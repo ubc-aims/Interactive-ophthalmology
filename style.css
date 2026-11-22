@@ -645,3 +645,238 @@ details > :last-child {
     transition-duration: .01ms !important;
   }
 }
+
+/* Conversation module: a calm clinic messenger, distinct from the quiz cards. */
+.layout:has(#scene.chat-scene) {
+  grid-template-columns: minmax(0, 1.8fr) minmax(270px, .78fr);
+  align-items: stretch;
+  gap: 20px;
+}
+
+#scene.chat-scene {
+  overflow: hidden;
+  padding: 0;
+  border-radius: 22px;
+  background: var(--surface);
+}
+
+#scene.chat-scene::before {
+  display: none;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px clamp(20px, 3vw, 30px);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--green-wash) 56%, var(--surface));
+}
+
+.chat-avatar {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--green) 25%, var(--line));
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--green-deep);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.chat-identity { min-width: 0; flex: 1; }
+.chat-header h2 { margin: 0 0 3px; font: 700 1.1rem/1.25 ui-sans-serif, system-ui, sans-serif; letter-spacing: -.015em; }
+.chat-identity span { color: var(--ink-soft); font-size: .84rem; }
+.chat-notes-link { flex: 0 0 auto; font-size: .88rem; font-weight: 700; }
+
+.chat-log {
+  display: grid;
+  gap: 22px;
+  padding: clamp(22px, 4vw, 38px);
+  background:
+    radial-gradient(ellipse at 90% 12%, color-mix(in srgb, var(--gold-wash) 35%, transparent), transparent 22rem),
+    var(--surface);
+}
+
+.chat-turn { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+.chat-turn:has(.learner-message) { align-items: flex-end; }
+.message-label { color: var(--ink-soft); font-size: .76rem; font-weight: 750; letter-spacing: .035em; }
+.message { max-width: min(88%, 620px); padding: 15px 18px; border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 3px 12px rgb(25 45 34 / 4%); }
+.message p { margin: 0; color: var(--ink); line-height: 1.62; }
+.patient-message { border-top-left-radius: 5px; background: var(--gold-wash); }
+.learner-message { border-color: color-mix(in srgb, var(--green) 32%, var(--line)); border-top-right-radius: 5px; background: var(--green-wash); }
+.turn-feedback { width: min(88%, 620px); margin: 4px 0 0; border-radius: 12px; background: var(--surface-raised); }
+.turn-feedback > summary { padding: 10px 13px; font-size: .88rem; }
+.turn-feedback > :not(summary) { margin-inline: 13px; }
+
+.chat-composer {
+  padding: 22px clamp(20px, 4vw, 38px) 26px;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-raised) 80%, var(--green-wash));
+}
+.composer-label { display: block; margin-bottom: 10px; color: var(--ink); font-size: .9rem; font-weight: 750; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+button.suggestion { min-height: 38px; padding: 7px 12px; border: 1px solid color-mix(in srgb, var(--green) 28%, var(--line)); border-radius: 999px; background: var(--surface); color: var(--green-deep); cursor: pointer; font-size: .85rem; font-weight: 650; line-height: 1.3; }
+button.suggestion:hover { border-color: var(--green); background: var(--green-wash); }
+.composer-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.composer-actions button { min-height: 44px; }
+button.secondary { padding: 9px 15px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); cursor: pointer; font-weight: 650; }
+button.secondary:hover { border-color: var(--green); background: var(--green-wash); }
+
+#notes {
+  position: sticky;
+  top: 20px;
+  padding: 24px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 93%, var(--green-wash));
+}
+#notes h2 { margin-bottom: 6px; font: 750 1.05rem/1.3 ui-sans-serif, system-ui, sans-serif; letter-spacing: 0; }
+#notes h2::before { background: var(--green); }
+.notes-section > p { margin-bottom: 18px; font-size: .88rem; }
+#notes .notes-section { margin-block: 12px; }
+#notes .checklist { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.checklist .check-item { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 10px; padding: 10px 11px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); }
+.check-label { color: var(--ink); font-size: .87rem; line-height: 1.4; }
+.check-state { color: var(--ink-soft); font-size: .75rem; font-weight: 750; white-space: nowrap; }
+.check-item[data-status="covered"] .check-state { color: var(--green); }
+.check-item[data-status="covered"] .check-state::before { content: "✓ "; }
+.check-item[data-status="pending"] .check-state::before { content: "○ "; }
+.clinical-finding { display: grid; gap: 4px; margin: 0; padding: 15px; border: 1px solid color-mix(in srgb, var(--gold) 30%, var(--line)); border-radius: 13px; background: var(--gold-wash); }
+.clinical-finding dt { color: var(--ink); font-size: .8rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.clinical-finding dd { margin: 0; color: var(--ink-soft); font-size: .9rem; line-height: 1.5; }
+
+@media (max-width: 819px) {
+  .layout:has(#scene.chat-scene) { grid-template-columns: minmax(0, 1fr); }
+  #notes { position: static; }
+}
+
+@media (max-width: 520px) {
+  .chat-header { gap: 11px; padding: 16px; }
+  .chat-avatar { width: 42px; height: 42px; border-radius: 14px; }
+  .chat-header h2 { font-size: 1rem; }
+  .chat-notes-link { font-size: .8rem; }
+  .chat-log { gap: 18px; padding: 20px 15px; }
+  .message, .turn-feedback { max-width: 94%; }
+  .message { padding: 13px 14px; }
+  .chat-composer { padding: 18px 15px 20px; }
+  .composer-actions { display: grid; grid-template-columns: 1fr; }
+  .composer-actions button { width: 100%; }
+  #notes { padding: 20px 16px; }
+}
+
+#scene.chat-scene {
+  align-self: start;
+  overflow: visible;
+}
+
+.chat-header {
+  border-radius: 21px 21px 0 0;
+}
+
+.chat-composer {
+  border-radius: 0 0 21px 21px;
+}
+
+.chat-log {
+  min-height: 15rem;
+  max-height: min(58vh, 32rem);
+  overflow-y: auto;
+  align-content: start;
+}
+
+.chat-turn .patient-message {
+  align-self: flex-start;
+}
+
+.chat-turn .turn-feedback {
+  align-self: center;
+}
+
+.turn-feedback[data-kind="review"] {
+  border-color: var(--gold);
+  background: var(--gold-wash);
+}
+
+#draft {
+  display: block;
+  width: 100%;
+  min-height: 3.5rem;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.composer-actions {
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.more-questions {
+  margin-bottom: 0;
+}
+
+.more-questions .suggestions {
+  margin-top: 10px;
+}
+
+#notes .check-evidence {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: .82rem;
+  line-height: 1.4;
+}
+
+.clinical-finding dd + dt {
+  margin-top: 10px;
+}
+
+.atlas-panel {
+  margin-block: 16px;
+}
+
+.atlas-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 12px;
+}
+
+.atlas-gallery figure {
+  margin: 0;
+}
+
+.atlas-gallery img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.atlas-gallery figcaption {
+  padding: 8px 0;
+  color: var(--ink-soft);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+.atlas-gallery figcaption p {
+  margin-bottom: .25rem;
+}
+
+#scene .feedback:empty {
+  display: none;
+}
+
+#scene .suggestion-label {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: .82rem;
+  font-weight: 700;
+}

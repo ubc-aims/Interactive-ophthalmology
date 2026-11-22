@@ -1,19 +1,113 @@
 "use strict";
 
 const clinicalCase = {
-  opening: "My right eye keeps getting red. It feels as if there’s grit in it, and now there’s a bump on my upper lid.",
+  patient: "Sarah",
+  opening: "My right eye keeps getting red. It feels gritty, and I’ve got a bump on my upper lid.",
   history: [
-    { id: "onset", label: "Onset and laterality", question: "When did this start? Which eye is affected?", reply: "Both eyes have felt gritty on and off before. This time it’s mainly the right eye and it’s been going on for weeks.", follow: { question: "When did the lid bump appear?", reply: "About two weeks ago. It was sore to touch at first and now it’s mostly just a bump." } },
-    { id: "vision", label: "Vision, pain and light sensitivity", question: "Has your vision changed? Any pain in the eye or sensitivity to light?", reply: "I can see as usual. There’s some irritation, but no deep pain and bright light doesn’t bother me." },
-    { id: "risks", label: "Lenses, injury and recent procedures", question: "Do you wear contacts? Any injury, chemical splash, or recent eye procedure?", reply: "I wear glasses. I haven’t had an injury, splash, or eye procedure." },
-    { id: "surface", label: "Discharge, itch and lid symptoms", question: "Any discharge, itching, or crusting around the lashes?", reply: "There’s a little crust around the lashes in the morning. It isn’t especially itchy and there’s no pus.", follow: { question: "Does the gritty feeling come and go?", reply: "Yes. I notice it more late in the day, especially after I’ve been reading." } },
-    { id: "background", label: "Prior episodes and treatments", question: "Has this happened before? Have you used anything for it?", reply: "I’ve had the gritty feeling before, but this is the first time I’ve noticed a lump. I haven’t used any drops." }
+    {
+      id: "onset",
+      label: "Onset and laterality",
+      priority: false,
+      questions: [
+        { id: "onset_when", question: "When did the redness and gritty feeling start?", reply: "It’s been going on for a few weeks.", note: "Redness and gritty feeling for a few weeks.", feedback: "The time course helps distinguish a sudden problem from a longer-running surface irritation." },
+        { id: "onset_side", question: "Is it in one eye or both?", reply: "Mostly my right eye this time. I’ve had that gritty feeling in both eyes on and off before.", note: "Current symptoms mainly right-sided; intermittent prior bilateral grittiness.", feedback: "Laterality and prior bilateral symptoms help characterize the current episode." }
+      ]
+    },
+    {
+      id: "vision",
+      label: "Vision change",
+      priority: true,
+      questions: [
+        { id: "vision_change", question: "Has your vision changed at all?", reply: "No, I can see as usual.", note: "No subjective vision change.", feedback: "A new change in vision with a red eye needs prompt assessment." },
+        { id: "vision_leading_review", kind: "review", question: "So the redness means you can’t see clearly, right?", reply: "No, I can see fine. It’s just red and gritty.", note: "Review: do not assume vision loss from redness alone.", feedback: "Ask openly about vision. Sarah reports no change, so do not record blurred vision." }
+      ]
+    },
+    {
+      id: "pain_light",
+      label: "Pain and light sensitivity",
+      priority: true,
+      questions: [
+        { id: "pain", question: "Does the eye hurt, or is it more irritated?", reply: "It’s irritated, but it doesn’t really hurt.", note: "Irritation without deep eye pain.", feedback: "Significant eye pain can point to a more urgent cause than mild surface irritation." },
+        { id: "light_sensitivity", question: "Does bright light bother you?", reply: "No, bright light doesn’t bother me.", note: "No light sensitivity.", feedback: "Light sensitivity with a red eye can signal corneal or intraocular inflammation and raises urgency." }
+      ]
+    },
+    {
+      id: "contact_lenses",
+      label: "Contact lens use",
+      priority: true,
+      questions: [
+        { id: "contacts", question: "Do you wear contact lenses?", reply: "No, I wear glasses.", note: "Glasses; no contact lens use reported.", feedback: "Contact lens use increases concern for a corneal infection when redness or pain is present." }
+      ]
+    },
+    {
+      id: "exposure",
+      label: "Injury, chemical exposure and procedures",
+      priority: true,
+      questions: [
+        { id: "exposure_events", question: "Did anything hit or scratch your eye, or did any chemical splash into it?", reply: "No, nothing got in my eye and I haven’t hurt it.", note: "No reported eye injury or chemical splash.", feedback: "Trauma or chemical exposure can need immediate action, especially chemical irrigation." },
+        { id: "recent_procedure", question: "Have you had an eye procedure recently?", reply: "No, I haven’t had any eye procedures.", note: "No recent eye procedure reported.", feedback: "Redness after a recent eye procedure can require prompt review." }
+      ]
+    },
+    {
+      id: "surface_symptoms",
+      label: "Discharge and surface symptoms",
+      priority: false,
+      questions: [
+        { id: "discharge_itch", question: "Any discharge or itching?", reply: "It isn’t especially itchy, and there’s no pus.", note: "No pus; little itch reported.", feedback: "Itch and discharge help distinguish common surface causes." },
+        { id: "lash_crust", question: "Do your lashes get crusty?", reply: "There’s a little crust around them in the morning.", note: "Mild morning lash crusting.", feedback: "Lash crusting helps identify associated lid-margin irritation." },
+        { id: "grit_timing", question: "When do you notice the gritty feeling most?", reply: "It comes and goes. I notice it more late in the day, especially after reading.", note: "Intermittent grittiness, worse late in the day and after reading.", feedback: "A fluctuating gritty sensation can fit surface irritation; it does not replace checking urgent symptoms." }
+      ]
+    },
+    {
+      id: "lid_bump",
+      label: "Lid bump time course and tenderness",
+      priority: false,
+      questions: [
+        { id: "bump_timing", question: "When did you first notice the bump?", reply: "About two weeks ago.", note: "Right upper lid bump noticed about two weeks ago.", feedback: "The bump’s time course helps distinguish a recent tender lesion from a longer-standing lump." },
+        { id: "bump_tenderness", question: "Was it sore at first, and is it still sore now?", reply: "It was sore to touch at first, but now it’s mostly just a bump.", note: "Initially tender, now minimally tender by history.", feedback: "A bump that has become less tender supports a different lid process than one that remains acutely sore." },
+        { id: "bump_location_follow", requires: "bump_timing", question: "Is the bump right at the lashes or a bit higher up?", reply: "It’s a little higher up, away from the lashes.", note: "Patient locates the bump above the lash line.", feedback: "The location helps connect the history with the lid examination." }
+      ]
+    },
+    {
+      id: "prior_episodes",
+      label: "Previous episodes",
+      priority: false,
+      questions: [
+        { id: "prior_grit", question: "Have you had this gritty feeling before?", reply: "Yes, I’ve had that feeling on and off before.", note: "Intermittent prior gritty feeling.", feedback: "Prior episodes help establish whether the surface symptom is recurrent." },
+        { id: "prior_bump", requires: "prior_grit", question: "Have you had a lid bump like this before?", reply: "No, this is the first time I’ve noticed a lump.", note: "First noticed lid lump.", feedback: "A first or recurrent lid lump changes what follow-up history is useful." }
+      ]
+    },
+    {
+      id: "treatments",
+      label: "Treatments tried",
+      priority: false,
+      questions: [
+        { id: "treatments_used", question: "Have you tried any drops or other treatment for it?", reply: "No, I haven’t used any drops.", note: "No drops tried.", feedback: "Knowing what has already been tried helps guide the next step and avoids overlooking a prior treatment response." },
+        { id: "treatment_review", kind: "review", question: "You’ve been using antibiotic drops, then?", reply: "No, I haven’t used any drops.", note: "Review: no eye drops used.", feedback: "Avoid leading assumptions about treatment. Sarah has not used drops." }
+      ]
+    }
   ],
   exam: [
-    { id: "acuity", label: "Visual acuity", reply: "Distance acuity is 20/20 in each eye with glasses." },
-    { id: "pupils", label: "Pupils and motility", reply: "Pupils are equal and reactive. Eye movements are full and painless, with no proptosis." },
-    { id: "lids", label: "Lids and lashes", reply: "There is a firm nodule within the right upper lid, away from the lash line. It is minimally tender. There are crusts at the lashes and plugged meibomian gland openings." },
-    { id: "surface", label: "Cornea and anterior chamber", reply: "The conjunctiva is mildly injected. Fluorescein shows scattered superficial punctate staining. There is no focal corneal infiltrate or anterior chamber inflammation." }
+    { id: "acuity", label: "Visual acuity", purpose: "Measure acuity in each eye and check for reduced vision.", reply: "Distance acuity is 20/20 in each eye with glasses." },
+    { id: "pupils", label: "Pupils and motility", purpose: "Look for abnormal pupils, painful or limited eye movements, and proptosis.", reply: "Pupils are equal and reactive. Eye movements are full and painless, with no proptosis." },
+    { id: "lids", label: "Lids and lashes", purpose: "Locate any bump and inspect the lash bases and gland openings.", reply: "There is a firm nodule within the right upper lid, away from the lash line. It is minimally tender. There are crusts at the lashes and plugged meibomian gland openings.",
+      photos: [
+        {
+          alt: "Close-up of an eyelid with a localized raised area",
+          label: "Lid contour",
+          src: "https://webeye.ophth.uiowa.edu/eyeforum/atlas/photos/chalazion/Chalazion_01242005.jpg",
+          source: "https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/Chalazion-2-.html",
+          credit: "Jordan Graff, MD"
+        },
+        {
+          alt: "Close-up of eyelashes with visible flakes at their bases",
+          label: "Lash bases",
+          src: "https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/blepharitis/Blepharitis.jpg",
+          source: "https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/blepharitis/index.htm",
+          credit: "Cindy Montague, CRA (photographer) and Jesse Vislisel, MD (contributor)"
+        }
+      ] },
+    { id: "surface", label: "Cornea and anterior chamber", purpose: "Look for corneal staining, a focal infiltrate, or anterior chamber inflammation.", reply: "The conjunctiva is mildly injected. Fluorescein shows scattered superficial punctate staining. There is no focal corneal infiltrate or anterior chamber inflammation." }
   ],
   checkpoints: {
     safety: {
