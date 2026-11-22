@@ -1400,3 +1400,82 @@ main.shell {
 .stage-end > button + button {
   margin-inline-start: 8px;
 }
+
+#stages {
+  overflow-x: auto;
+  padding: 5px 1px 10px;
+}
+
+#stages .case-track {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0;
+  min-width: max-content;
+}
+
+#stages .case-track li {
+  display: flex;
+  position: relative;
+  flex: 1 0 auto;
+  align-items: center;
+  padding: 0;
+  background: none;
+  color: var(--ink-soft);
+}
+
+.case-track li:not(:last-child)::after {
+  content: "";
+  flex: 1 0 10px;
+  height: 2px;
+  background: var(--line);
+}
+
+.case-track li[data-completed="true"]::after {
+  background: var(--green);
+}
+
+.case-track .track-label {
+  display: grid;
+  min-height: 34px;
+  place-items: center;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: .82rem;
+  white-space: nowrap;
+}
+
+.case-track .feedback-stop .track-label {
+  width: 14px;
+  min-height: 14px;
+  padding: 0;
+  border: 2px solid var(--line);
+}
+
+.case-track li[data-completed="true"] .track-label {
+  border-color: var(--green);
+  color: var(--green-deep);
+}
+
+.case-track li[aria-current="step"] .track-label {
+  border-color: var(--green);
+  background: var(--green);
+  color: var(--button-ink);
+}
+
+.case-track .feedback-stop[aria-current="step"] .track-label {
+  width: 22px;
+  min-height: 22px;
+  box-shadow: 0 0 0 4px var(--green-wash);
+}
+
+#stages .case-track li:last-child {
+  flex-grow: 0;
+}
+
+#scene .clinical-finding dd {
+  white-space: pre-wrap;
+}

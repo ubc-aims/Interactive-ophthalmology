@@ -28,7 +28,19 @@ const steps = [
   }
 ];
 
-let step, seenHistory, seenExam, interviewTurns, manualChecks, assessments, activeHints, examInterpretations, counsellingTurns;
+const feedbackPhases = ["history", "examination", "preceptor", "counselling"];
+const feedbackLabels = {
+  history: "History feedback",
+  examination: "Examination feedback",
+  preceptor: "Preceptor feedback",
+  counselling: "Counselling feedback"
+};
+const discussionOpenings = {
+  preceptor: "Hi, how are you doing? Tell me about your patient.",
+  counselling: "What do you think the bump is? What should I do about it?"
+};
+
+let step, seenHistory, seenExam, interviewTurns, manualChecks, assessments, activeHints, examInterpretations, counsellingTurns, preceptorTurns, feedbackRequests;
 let chatKey;
 
 function element(tag, text, className) {
@@ -53,6 +65,8 @@ function start() {
   seenExam = new Map();
   examInterpretations = new Map();
   counsellingTurns = [];
+  preceptorTurns = [];
+  feedbackRequests = new Map();
   observationInput.value = "";
   manualChecks = new Set();
   assessments = new Map();
@@ -62,7 +76,7 @@ function start() {
 function next() {
   const dialog = document.querySelector("#stage-confirmation");
   const message = document.querySelector("#stage-confirmation-message");
-  const target = steps[step + 1]?.label || "Case feedback";
+  const target = step < 0 ? steps[0].label : feedbackLabels[feedbackPhases[step]];
   message.textContent = "Next: " + target + ".";
   dialog.returnValue = "";
   dialog.showModal();
@@ -71,6 +85,11 @@ function next() {
 function confirmStageChange() {
   const dialog = document.querySelector("#stage-confirmation");
   if (dialog.returnValue !== "yes") return;
+  if (step < 0) advance();
+  else showFeedback(feedbackPhases[step], true);
+}
+
+function advance() {
   step += 1;
   render();
 }
@@ -82,21 +101,37 @@ function heading(title) {
   scene.append(node);
 }
 
+function progressTrack(inFeedback = false) {
+  const track = element("ol", "", "case-track");
+  const entries = [
+    ["Introduction", false],
+    ...steps.flatMap(({ label }, index) => [[label, false], [feedbackLabels[feedbackPhases[index]], true]]),
+    ["End", false]
+  ];
+  const current = step < 0 ? 0 : step >= steps.length ? entries.length - 1 : step * 2 + (inFeedback ? 2 : 1);
+  entries.forEach(([label, feedback], index) => {
+    const item = element("li", "", feedback ? "feedback-stop" : "station-stop");
+    const marker = element("span", feedback ? "" : label, "track-label");
+    if (feedback) {
+      marker.setAttribute("aria-label", label);
+      marker.title = label;
+      marker.append(element("span", label, "sr-only"));
+    }
+    item.append(marker);
+    if (index < current) item.dataset.completed = "true";
+    if (index === current) item.setAttribute("aria-current", "step");
+    track.append(item);
+  });
+  stages.replaceChildren(track);
+  const active = track.children[current];
+  if (stages.scrollWidth > stages.clientWidth) {
+    stages.scrollLeft = active.offsetLeft - (stages.clientWidth - active.offsetWidth) / 2;
+  }
+}
+
 function render() {
   const stage = steps[step];
-  const list = element("ol");
-  steps.forEach(({ label }, index) => {
-    const item = element("li", label);
-    if (index === step) item.setAttribute("aria-current", "step");
-    list.append(item);
-  });
-  const progress = element("progress", "", "case-progress");
-  progress.max = steps.length;
-  progress.value = Math.max(0, step);
-  progress.setAttribute("aria-label", "Completed case stages");
-  const label = step < 0 ? "Introduction" : stage ? `Stage ${step + 1} of ${steps.length}` : "Case complete";
-  const caption = element("p", label, "progress-caption");
-  stages.replaceChildren(caption, progress, list);
+  progressTrack();
   scene.replaceChildren();
   activeHints = null;
   scene.classList.toggle("chat-scene", Boolean(stage) && step !== 1);
@@ -180,7 +215,7 @@ function interview() {
   const send = element("button", "Send", "primary");
   send.type = "submit";
   send.disabled = true;
-  const proceed = button("Next: Examination", "secondary", next);
+  const proceed = button("Finish history", "secondary", next);
   const end = element("div", "", "stage-end");
   end.append(button("Request feedback", "secondary", () => showFeedback("history")), proceed);
   const options = [clinicalCase.reason, clinicalCase.story, ...clinicalCase.history.flatMap(topic => topic.questions)];
@@ -340,7 +375,7 @@ function atlasPhotos(photos) {
   return panel;
 }
 
-function historyFeedback() {
+function historyFeedback(onReady) {
   const panel = element("details", "", "history-feedback");
   panel.open = true;
   panel.append(element("summary", "Interview review"));
@@ -369,24 +404,22 @@ function historyFeedback() {
 
   if (!interviewTurns.length) {
     status.textContent = "No questions were sent during the history.";
+    onReady();
     return panel;
   }
-  const currentRun = assessments;
   status.textContent = "Reviewing the history against the rubric…";
   const transcript = interviewTurns.map(({ question, reply }) => ({ question, reply }));
   const learnerText = transcript.map(turn => "Learner: " + turn.question).join("\n");
-  assessLearner(chatKey, "history", learnerText, {
+  assessOnce("history", learnerText, {
     objective: steps[0].objective,
     transcript,
     observed_question_ids: [...seenHistory.keys()],
     student_checklist: [...manualChecks]
   }).then(feedback => {
-    if (assessments !== currentRun) return;
-    assessments.set("history", feedback);
     status.replaceWith(assessmentDisplay("history", feedback));
   }).catch(() => {
     status.textContent = "DeepSeek feedback is unavailable. Use the question review and next step below.";
-  });
+  }).finally(onReady);
   return panel;
 }
 
@@ -447,7 +480,7 @@ function examination() {
   const hints = element("p", "Start with visual acuity. Then select the exams that address what you learned in the history.");
   activeHints = hints;
   const end = element("div", "", "stage-end");
-  end.append(button("Request feedback", "secondary", () => showFeedback("examination")), button("Next: Preceptor", "primary", next));
+  end.append(button("Request feedback", "secondary", () => showFeedback("examination")), button("Finish examination", "primary", next));
   scene.append(map, actions, panel, end);
 }
 
@@ -459,19 +492,24 @@ function examEvidence() {
   };
 }
 
-function showFeedback(phase) {
-  const names = { history: "History feedback", examination: "Examination feedback", counselling: "Counselling feedback" };
+function showFeedback(phase, afterStation = false) {
   const saved = [...scene.childNodes];
   const previousFocus = document.activeElement;
   scene.replaceChildren();
   scene.classList.remove("chat-scene");
-  heading(names[phase]);
+  progressTrack(true);
+  heading(feedbackLabels[phase]);
   const back = button("Back to " + steps[step].label.toLowerCase(), "secondary", () => {
     scene.replaceChildren(...saved);
     scene.classList.toggle("chat-scene", step !== 1);
+    progressTrack();
     previousFocus?.focus();
   });
-  if (phase === "history") scene.append(historyFeedback());
+  const target = steps[step + 1]?.label || "End";
+  const proceed = button("Continue to " + target, "primary", advance);
+  proceed.disabled = true;
+  function onReady() { proceed.disabled = false; }
+  if (phase === "history") scene.append(historyFeedback(onReady));
   if (phase === "examination") {
     const evidence = examEvidence();
     const sequence = evidence.selected.map(test => test.label).join(" → ");
@@ -485,35 +523,58 @@ function showFeedback(phase) {
       objective: steps[1].objective,
       encountered_red_flags: [...seenHistory.values()].filter(item => item.kind !== "review").map(item => item.note),
       ...evidence
-    });
+    }, onReady);
   }
   if (phase === "counselling") {
     requestAssessment("counselling", counsellingTurns.map(turn => turn.question).join("\n"), {
       objective: steps[3].objective,
       plan: clinicalCase.checkpoints.plan.modelResponse,
       transcript: counsellingTurns
-    });
+    }, onReady);
   }
-  scene.append(back);
+  if (phase === "preceptor") {
+    scene.append(element("p", "Review your preceptor’s follow-up questions and replies."));
+    scene.append(transcriptDisplay("Preceptor conversation", "Preceptor", discussionOpenings.preceptor, preceptorTurns, true));
+    onReady();
+  }
+  const actions = element("div", "", "stage-end");
+  actions.append(back);
+  if (afterStation) actions.append(proceed);
+  scene.append(actions);
   scene.querySelector("h2").focus();
 }
 
-function requestAssessment(phase, text, evidence) {
+function assessOnce(phase, text, evidence) {
+  const signature = JSON.stringify([phase, text, evidence]);
+  const currentRequests = feedbackRequests;
+  if (!currentRequests.has(signature)) {
+    const currentRun = assessments;
+    const request = assessLearner(chatKey, phase, text, evidence).then(result => {
+      if (assessments === currentRun) assessments.set(phase, result);
+      return result;
+    }).catch(error => {
+      currentRequests.delete(signature);
+      throw error;
+    });
+    currentRequests.set(signature, request);
+  }
+  return currentRequests.get(signature);
+}
+
+function requestAssessment(phase, text, evidence, onReady) {
   const status = element("p", "Reviewing your work…", "chat-status");
   status.setAttribute("role", "status");
   scene.append(status);
   if (!text.trim()) {
     status.textContent = "Send a counselling message before requesting feedback.";
+    onReady();
     return;
   }
-  const currentRun = assessments;
-  assessLearner(chatKey, phase, text, evidence).then(feedback => {
-    if (assessments !== currentRun) return;
-    assessments.set(phase, feedback);
+  assessOnce(phase, text, evidence).then(feedback => {
     if (status.isConnected) status.replaceWith(assessmentDisplay(phase, feedback));
   }).catch(() => {
     status.textContent = "DeepSeek feedback is unavailable. You can go back and request it again.";
-  });
+  }).finally(onReady);
 }
 
 function counsellingReply(text) {
@@ -534,9 +595,7 @@ function counsellingReply(text) {
 function discussion(phase) {
   const isPreceptor = phase === "preceptor";
   const speaker = isPreceptor ? "Preceptor" : clinicalCase.patient;
-  const opening = isPreceptor
-    ? "Hi, how are you doing? Tell me about your patient."
-    : "What do you think the bump is? What should I do about it?";
+  const opening = discussionOpenings[phase];
   const header = element("div", "", "chat-header");
   heading(speaker);
   const identity = element("div", "", "chat-identity");
@@ -556,13 +615,13 @@ function discussion(phase) {
   send.disabled = true;
   const status = element("p", "", "chat-status");
   status.setAttribute("role", "status");
-  const proceed = button(isPreceptor ? "Return to Sarah" : "Finish case", "secondary", next);
+  const proceed = button(isPreceptor ? "Finish presentation" : "Finish counselling", "secondary", next);
   const end = element("div", "", "stage-end");
   proceed.disabled = true;
   const request = isPreceptor ? null : button("Request feedback", "secondary", () => showFeedback("counselling"));
   if (request) end.append(request);
   end.append(proceed);
-  const transcript = [];
+  const transcript = isPreceptor ? preceptorTurns : counsellingTurns;
   let ready = false;
   let pending = false;
   draft.addEventListener("input", () => { send.disabled = pending || !draft.value.trim(); });
@@ -588,7 +647,6 @@ function discussion(phase) {
         })
         : { reply: counsellingReply(text), ready: true };
       transcript.push({ question: text, reply: reply.reply });
-      if (!isPreceptor) counsellingTurns.push({ question: text, reply: reply.reply });
       waiting.remove();
       turn.append(chatMessage(speaker, reply.reply, "patient"));
       ready = reply.ready;
@@ -708,15 +766,78 @@ function renderNotes() {
 
 }
 
-function debrief() {
-  heading("Review your reasoning");
-  const missed = clinicalCase.history.filter(item => !topicCovered(item)).map(item => item.label);
-  if (missed.length) scene.append(element("p", "History topics to revisit: " + missed.join(", ") + "."));
-  const review = element("div", "", "review");
-  for (const [phase, feedback] of assessments) {
-    const labels = { history: "History", examination: "Examination", counselling: "Patient counselling" };
-    review.append(element("h3", labels[phase]), assessmentDisplay(phase, feedback));
+function transcriptEntries(speaker, opening, turns) {
+  const rows = opening ? [[speaker, opening]] : [];
+  for (const { question, reply } of turns) rows.push(["You", question], [speaker, reply]);
+  return rows;
+}
+
+function reportSection(title, rows, open = false) {
+  const details = element("details");
+  details.open = open;
+  details.append(element("summary", title));
+  const list = element("dl", "", "clinical-finding");
+  for (const [label, text] of rows) list.append(element("dt", label), element("dd", text));
+  details.append(list);
+  return details;
+}
+
+function transcriptDisplay(title, speaker, opening, turns, open = false) {
+  return reportSection(title, transcriptEntries(speaker, opening, turns), open);
+}
+
+function caseReport() {
+  const examination = examEvidence();
+  const historyTranscript = [["You", clinicalCase.greeting], ...transcriptEntries(clinicalCase.patient, clinicalCase.opening, interviewTurns)];
+  const examRows = examination.selected.map(({ label, finding, interpretation }) => [
+    label,
+    finding + (interpretation.trim() ? "\nYour interpretation: " + interpretation.trim() : "")
+  ]);
+  if (examination.missed.length) examRows.push(["Core components missed", examination.missed.join(", ")]);
+  const sections = [
+    ["History transcript", historyTranscript],
+    ["Examination record", examRows],
+    ["Preceptor transcript", transcriptEntries("Preceptor", discussionOpenings.preceptor, preceptorTurns)],
+    ["Counselling transcript", transcriptEntries(clinicalCase.patient, discussionOpenings.counselling, counsellingTurns)]
+  ];
+  const labels = { met: "Met", partial: "Develop further", missing: "Missing" };
+  for (const phase of ["history", "examination", "counselling"]) {
+    const results = assessments.get(phase);
+    const rows = results ? results.map(({ id, status, feedback }) => [
+      assessmentCriteria[phase].find(item => item.id === id).label + " · " + labels[status],
+      feedback
+    ]) : [];
+    if (phase === "history") {
+      for (const turn of interviewTurns.filter(item => item.verdict)) {
+        rows.push([turn.question, turn.verdict + ". " + turn.explanation]);
+      }
+      const missed = clinicalCase.history.filter(topic => !topicCovered(topic));
+      if (missed.length) rows.push(["Topics to revisit", missed.map(topic => topic.label).join(", ")]);
+    }
+    if (!results) rows.push(["Assessor", "No model feedback was available for this station."]);
+    sections.push([feedbackLabels[phase], rows]);
   }
+  if (observationInput.value.trim()) sections.push(["Your observations", [["Notes", observationInput.value.trim()]]]);
+  return sections;
+}
+
+function downloadCaseReport() {
+  const sections = caseReport();
+  const text = ["# The Red Eye", ...sections.flatMap(([title, rows]) => [
+    "", "## " + title, ...rows.flatMap(([label, detail]) => ["", "**" + label + "**", "", detail])
+  ])].join("\n");
+  const url = URL.createObjectURL(new Blob([text + "\n"], { type: "text/markdown;charset=utf-8" }));
+  const link = element("a");
+  link.href = url;
+  link.download = "red-eye-case-report.md";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function debrief() {
+  heading("Case summary");
+  scene.append(button("Download report", "primary", downloadCaseReport));
+  for (const [title, rows] of caseReport()) scene.append(reportSection(title, rows));
   const guide = element("details");
   guide.open = true;
   guide.append(element("summary", "Red-eye approach for your next patient"));
@@ -738,7 +859,7 @@ function debrief() {
     sourceList.append(item);
   }
   references.append(sourceList);
-  scene.append(review, guide, references, button("Restart case", "primary", start));
+  scene.append(guide, references, button("Restart case", "secondary", start));
 }
 
 function applyTheme(setting) {
