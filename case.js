@@ -318,26 +318,43 @@ function enterToSend(input, form) {
   });
 }
 
-function atlasPhotos(photos) {
-  const panel = element("div", "", "atlas-panel");
-  panel.append(element("p", "EyeRounds reference images"));
+function examMedia(photos) {
   const gallery = element("div", "", "atlas-gallery");
   for (const photo of photos) {
     const figure = element("figure");
-    const img = element("img");
-    img.alt = photo.alt;
-    img.src = photo.src;
-    const caption = element("figcaption");
-    const source = element("a", "EyeRounds atlas source");
+    if (photo.embed) {
+      const frame = element("iframe", "", "exam-video");
+      frame.src = photo.embed;
+      frame.title = photo.label;
+      frame.allowFullscreen = true;
+      frame.referrerPolicy = "strict-origin-when-cross-origin";
+      figure.append(frame);
+    } else {
+      const img = element("img");
+      img.alt = photo.alt;
+      img.src = photo.src;
+      if (photo.crop) {
+        const frame = element("div", "", photo.crop);
+        frame.append(img);
+        figure.append(frame);
+      } else {
+        figure.append(img);
+      }
+    }
+    const source = element("a", photo.embed ? "Open video source" : "Image source");
     source.href = photo.source;
-    const license = element("a", "CC BY-NC-ND 3.0");
-    license.href = "https://creativecommons.org/licenses/by-nc-nd/3.0/";
-    caption.append(element("strong", photo.label), element("p", photo.credit + " · University of Iowa"), source, " · ", license);
-    figure.append(img, caption);
+    const caption = element("figcaption");
+    caption.append(element("strong", photo.label), element("p", photo.credit + (!photo.license && !photo.embed ? " · University of Iowa" : "")), source);
+    if (!photo.embed) {
+      const [label, url] = photo.license || ["CC BY-NC-ND 3.0", "https://creativecommons.org/licenses/by-nc-nd/3.0/"];
+      const license = element("a", label);
+      license.href = url;
+      caption.append(" · ", license);
+    }
+    figure.append(caption);
     gallery.append(figure);
   }
-  panel.append(gallery);
-  return panel;
+  return gallery;
 }
 
 function historyFeedback(onReady) {
@@ -393,7 +410,7 @@ function historyFeedback(onReady) {
 
 function examination() {
   heading("Examine the eye");
-  scene.append(element("p", "Select an area or choose a test, then record your interpretation."));
+  scene.append(element("p", "Choose a named test or select an area of the eye. Record what you observe."));
   const map = element("figure", "", "exam-map");
   const eye = element("div", "", "eye-figure");
   const image = element("img");
@@ -411,11 +428,14 @@ function examination() {
   panel.hidden = true;
   panel.setAttribute("aria-label", "Selected examination");
   const choices = [];
-  function reveal(test, choice) {
+  function reveal(test) {
     const { id, label, reply, photos } = test;
     if (!seenExam.has(id)) seenExam.set(id, [label, reply]);
-    for (const item of choices) item.setAttribute("aria-pressed", String(item === choice));
-    choice.dataset.completed = "true";
+    for (const choice of choices) {
+      const selected = choice.dataset.testId === id;
+      choice.setAttribute("aria-pressed", String(selected));
+      if (selected) choice.dataset.completed = "true";
+    }
     const input = element("textarea");
     input.id = "exam-interpretation-" + id;
     input.rows = 2;
@@ -427,29 +447,36 @@ function examination() {
     const title = element("h3", label);
     title.tabIndex = -1;
     panel.replaceChildren(title);
-    if (photos) panel.append(atlasPhotos(photos));
-    panel.append(element("p", reply), fieldLabel, input);
+    if (photos) panel.append(examMedia(photos));
+    else panel.append(element("p", reply));
+    panel.append(fieldLabel, input);
     panel.hidden = false;
     renderNotes();
     title.focus();
   }
   for (const test of clinicalCase.exam) {
-    const choice = button(test.marker || test.label, test.spot ? "eye-hotspot" : "choice", () => reveal(test, choice));
+    const choice = button(test.label, "choice", () => reveal(test));
     choice.setAttribute("aria-pressed", "false");
-    if (test.spot) {
-      choice.style.setProperty("--spot-x", test.spot[0] + "%");
-      choice.style.setProperty("--spot-y", test.spot[1] + "%");
-      choice.title = test.label;
-      choice.setAttribute("aria-label", test.label);
-      eye.append(choice);
-    } else actions.append(choice);
+    choice.dataset.testId = test.id;
+    actions.append(choice);
     choices.push(choice);
+    if (test.spot) {
+      const marker = button(test.marker, "eye-hotspot", () => reveal(test));
+      marker.style.setProperty("--spot-x", test.spot[0] + "%");
+      marker.style.setProperty("--spot-y", test.spot[1] + "%");
+      marker.title = test.label;
+      marker.setAttribute("aria-label", test.label);
+      marker.setAttribute("aria-pressed", "false");
+      marker.dataset.testId = test.id;
+      eye.append(marker);
+      choices.push(marker);
+    }
   }
   const hints = element("p", "Start with visual acuity. Then select the exams that address what you learned in the history.");
   activeHints = hints;
   const end = element("div", "", "stage-end");
   end.append(button("Request feedback", "secondary", () => showFeedback("examination")), button("Finish examination", "primary", next));
-  scene.append(map, actions, panel, end);
+  scene.append(actions, map, panel, end);
 }
 
 function examEvidence() {
@@ -485,6 +512,9 @@ function showFeedback(phase, afterStation = false) {
     if (evidence.missed.length) scene.append(element("p", "Core exam components missed: " + evidence.missed.join(", ") + "."));
     if (evidence.additional.some(test => test.id === "dilation")) {
       scene.append(element("p", "A routine dilated exam is not part of this focused anterior exam. Explain what finding or concern would justify it."));
+    }
+    if (evidence.selected.length) {
+      scene.append(reportSection("Reference findings", evidence.selected.map(test => [test.label, test.finding])));
     }
     const recorded = evidence.selected.map(test => ({ test: test.id, interpretation: test.interpretation }));
     requestAssessment("examination", JSON.stringify(recorded), {
@@ -713,9 +743,9 @@ function renderNotes() {
     checkItem(history, topic.id, topic.label, answers.map(item => item.note).join(" "), status);
   }
   const exam = element("ul", "", "checklist");
-  for (const { id, label, purpose } of clinicalCase.exam) {
+  for (const { id, label, purpose, photos } of clinicalCase.exam) {
     const found = seenExam.get(id);
-    checkItem(exam, "exam-" + id, label, found ? found[1] : purpose, found ? "Examined" : "");
+    checkItem(exam, "exam-" + id, label, found ? (photos ? examInterpretations.get(id) : found[1]) : purpose, found ? "Examined" : "");
   }
   const transcript = notesSection("transcript", "Interview transcript", false);
   transcript.parentElement.hidden = step <= 0;

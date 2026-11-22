@@ -98,33 +98,62 @@ const clinicalCase = {
   },
   exam: [
     { id: "acuity", label: "Visual acuity", purpose: "Measure acuity in each eye and check for reduced vision.", reply: "Distance acuity is 20/20 in each eye with glasses." },
-    { id: "pupils", label: "Pupils", spot: [49, 49], marker: "P", purpose: "Check pupil size and response to light.", reply: "Pupils are equal and reactive." },
-    { id: "motility", label: "Eye movements", purpose: "Check for painful or restricted movement and proptosis.", reply: "Eye movements are full and painless, with no proptosis." },
+    { id: "pupils", label: "Pupils", spot: [49, 49], marker: "P", purpose: "Check pupil size and response to light.", reply: "Pupils are equal and reactive.",
+      photos: [{
+        alt: "Close-up clip of an eye during light testing",
+        label: "Light test",
+        src: "assets/exam-pupil.gif",
+        source: "https://commons.wikimedia.org/wiki/File:Photopupillary_reflex.gif",
+        credit: "01syhr · Wikimedia Commons",
+        license: ["CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0/"]
+      }] },
+    { id: "motility", label: "Eye movements", purpose: "Check for painful or restricted movement and proptosis.", reply: "Eye movements are full and painless, with no proptosis.",
+      photos: [{
+        label: "Gaze test",
+        embed: "https://www.youtube-nocookie.com/embed/SosAdfRZzXs",
+        source: "https://morancore.utah.edu/section-05-neuro-ophthalmology/normal-eye-movements/",
+        credit: "Kathleen B. Digre, MD · Moran CORE"
+      }] },
     { id: "lids", label: "Lids and lashes", spot: [47, 32], marker: "L", purpose: "Locate any bump and inspect the lash bases and gland openings.", reply: "There is a firm nodule within the right upper lid, away from the lash line. It is minimally tender. There are crusts at the lashes and plugged meibomian gland openings.",
       photos: [
         {
           alt: "Close-up of an eyelid with a localized raised area",
           label: "Lid contour",
-          src: "https://webeye.ophth.uiowa.edu/eyeforum/atlas/photos/chalazion/Chalazion_01242005.jpg",
+          src: "assets/exam-lid.jpg",
           source: "https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/Chalazion-2-.html",
           credit: "Jordan Graff, MD"
         },
         {
           alt: "Close-up of eyelashes with visible flakes at their bases",
           label: "Lash bases",
-          src: "https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/blepharitis/Blepharitis.jpg",
+          src: "assets/exam-lashes.jpg",
           source: "https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/blepharitis/index.htm",
           credit: "Cindy Montague, CRA (photographer) and Jesse Vislisel, MD (contributor)"
         }
       ] },
-    { id: "conjunctiva", label: "Conjunctiva", spot: [75, 50], marker: "J", purpose: "Assess the location and degree of redness.", reply: "The conjunctiva is mildly injected." },
+    { id: "conjunctiva", label: "Conjunctiva", spot: [75, 50], marker: "J", purpose: "Assess the location and degree of redness.", reply: "The conjunctiva is mildly injected.",
+      photos: [{
+        alt: "Slit-lamp photograph of the bulbar conjunctiva",
+        label: "Bulbar conjunctiva",
+        src: "assets/exam-conjunctiva-figure.png",
+        crop: "conjunctiva-detail",
+        source: "https://pmc.ncbi.nlm.nih.gov/articles/PMC6403378/#Fig5",
+        credit: "Sakamoto et al., 2019 · detail of Figure 5A",
+        license: ["CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/"]
+      }] },
     { id: "surface", label: "Cornea and anterior chamber", spot: [64, 62], marker: "C", purpose: "Look for corneal staining, a focal infiltrate, or anterior chamber inflammation.", reply: "Fluorescein shows scattered superficial punctate staining. There is no focal corneal infiltrate or anterior chamber inflammation.",
       photos: [{
-        alt: "Cornea after fluorescein showing scattered bright punctate staining",
+        alt: "Magnified corneal photograph after fluorescein under blue illumination",
         label: "Fluorescein reference",
-        src: "https://eyerounds.org/atlas/pages/punctate-epithelial-erosions-3/PEE-LRG.jpg",
+        src: "assets/exam-fluorescein.jpg",
         source: "https://eyerounds.org/atlas/pages/punctate-epithelial-erosions-3/index.htm",
         credit: "Stefani Karakas, CRA (photographer) and Jesse Vislisel, MD (contributor)"
+      }, {
+        alt: "Optical section through the front of the eye using a narrow slit beam",
+        label: "Anterior segment slit-beam view",
+        src: "assets/exam-slit-beam.jpg",
+        source: "https://eyerounds.org/atlas/pages/Normal-Cornea/",
+        credit: "Brice Critser, CRA (photographer) and Jesse Vislisel, MD (contributor)"
       }] },
     { id: "vitals", label: "Vital signs", optional: true, purpose: "Review systemic observations if needed.", reply: "Systemic vital signs are not provided in this case." },
     { id: "pressure", label: "Intraocular pressure", optional: true, purpose: "Consider pressure measurement when the history or exam raises concern for elevated pressure and it is safe to measure.", reply: "An intraocular pressure measurement is not provided in this case." },

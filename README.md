@@ -54,3 +54,12 @@ The progress track includes Introduction, the four stations, feedback stops, and
 The AOCLE red-eye pocket guide asks whether symptoms are “worse, better, or the same” under **Chief Complaint**. This supports a distinct progression question alongside onset, vision change, and light sensitivity. Live model trials check dialogue and rubric behavior when prompts or case facts change. Frontend-only edits can be verified with local interaction tests. [AOCLE red-eye pocket guide](https://aocle.org/wp-content/uploads/2022/09/Pocket-Guide-CL-related-red-eye.pdf)
 
 The editable counselling agenda covers resolution, vision, first-line care, and follow-up. MedlinePlus says a chalazion “will often go away without treatment” under **Treatment**, and identifies warm compresses as the first treatment. The MSD Manual describes possible “slightly blurred vision” from a larger lesion in **Symptoms and Signs**. These topics inform Sarah’s questions, alongside the case findings and the taught plan. [MedlinePlus chalazion patient information](https://www.medlineplus.gov/ency/article/001006.htm) · [MSD Manual on chalazion](https://www.msdmanuals.com/professional/eye-disorders/eyelid-and-lacrimal-disorders/chalazion-and-hordeolum-stye)
+
+### Examination media
+
+Choose a named test or an eye hotspot. Image and video stations show the media before the learner records an interpretation. Written reference findings are available in feedback.
+
+- The conjunctiva photograph shows the grade 1 panel from Sakamoto et al., Figure 5A. The original figure is displayed through a CSS crop to isolate that panel. [Source](https://pmc.ncbi.nlm.nih.gov/articles/PMC6403378/#Fig5) · [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- The unmodified pupil light-test animation is by 01syhr. [Source](https://commons.wikimedia.org/wiki/File:Photopupillary_reflex.gif) · [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+- The gaze test uses the publisher’s embedded video by Kathleen B. Digre, MD, and links to its source. [Moran CORE](https://morancore.utah.edu/section-05-neuro-ophthalmology/normal-eye-movements/)
+- The anterior segment slit-beam reference is by Brice Critser, CRA, and Jesse Vislisel, MD, at EyeRounds. [Source and image permissions](https://eyerounds.org/atlas/pages/Normal-Cornea/)
