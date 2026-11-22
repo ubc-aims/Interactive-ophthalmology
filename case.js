@@ -170,7 +170,7 @@ function stageObjective() {
 
 function chatMessage(speaker, message, side) {
   const bubble = element("div", "", "message " + side + "-message");
-  bubble.append(element("span", speaker, "message-label"), element("p", message));
+  bubble.append(element("span", speaker, "sr-only"), element("p", message));
   return bubble;
 }
 
@@ -189,8 +189,8 @@ function interview() {
   const avatar = element("span", clinicalCase.patient[0], "chat-avatar");
   avatar.setAttribute("aria-hidden", "true");
   const identity = element("div", "", "chat-identity");
-  heading(clinicalCase.patient);
-  identity.append(scene.lastElementChild, element("span", clinicalCase.patientSummary));
+  heading(clinicalCase.patient + ", " + clinicalCase.patientSummary);
+  identity.append(scene.lastElementChild, element("span", "Presenting complaint: " + clinicalCase.presentingComplaint, "presenting-complaint"));
   header.append(avatar, identity);
 
   const log = element("div", "", "chat-log");
@@ -543,9 +543,10 @@ function discussion(phase) {
   const speaker = isPreceptor ? "Preceptor" : clinicalCase.patient;
   const opening = discussionOpenings[phase];
   const header = element("div", "", "chat-header");
-  heading(speaker);
+  heading(isPreceptor ? speaker : speaker + ", " + clinicalCase.patientSummary);
   const identity = element("div", "", "chat-identity");
   identity.append(scene.lastElementChild);
+  if (!isPreceptor) identity.append(element("span", "Presenting complaint: " + clinicalCase.presentingComplaint, "presenting-complaint"));
   header.append(identity);
   const log = element("div", "", "chat-log");
   log.setAttribute("role", "log");

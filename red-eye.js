@@ -2,7 +2,8 @@
 
 const clinicalCase = {
   patient: "Sarah",
-  patientSummary: "32-year-old female · Red eye",
+  patientSummary: "32-year-old female",
+  presentingComplaint: "red eye",
   greeting: "Hi, how are you doing?",
   history: [
     {

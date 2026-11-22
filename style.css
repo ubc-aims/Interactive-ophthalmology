@@ -689,24 +689,58 @@ details > :last-child {
 
 .chat-identity { min-width: 0; flex: 1; }
 .chat-header h2 { margin: 0 0 3px; font: 700 1.1rem/1.25 ui-sans-serif, system-ui, sans-serif; letter-spacing: -.015em; }
-.chat-identity span { color: var(--ink-soft); font-size: .84rem; }
+.chat-identity .presenting-complaint {
+  display: block;
+  color: var(--ink-soft);
+  font-size: .9rem;
+  font-weight: 600;
+}
 
 .chat-log {
   display: grid;
-  gap: 22px;
-  padding: clamp(22px, 4vw, 38px);
-  background:
-    radial-gradient(ellipse at 90% 12%, color-mix(in srgb, var(--gold-wash) 35%, transparent), transparent 22rem),
-    var(--surface);
+  gap: 16px;
+  padding: clamp(20px, 3.8vw, 32px);
+  background: color-mix(in srgb, var(--page) 75%, var(--green-wash));
 }
 
-.chat-turn { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
-.chat-turn:has(.learner-message) { align-items: flex-end; }
-.message-label { color: var(--ink-soft); font-size: .76rem; font-weight: 750; letter-spacing: .035em; }
-.message { max-width: min(88%, 620px); padding: 15px 18px; border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 3px 12px rgb(25 45 34 / 4%); }
-.message p { margin: 0; color: var(--ink); line-height: 1.62; }
-.patient-message { border-top-left-radius: 5px; background: var(--gold-wash); }
-.learner-message { border-color: color-mix(in srgb, var(--green) 32%, var(--line)); border-top-right-radius: 5px; background: var(--green-wash); }
+.chat-turn {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.message {
+  position: relative;
+  width: fit-content;
+  max-width: min(84%, 31rem);
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 2px 4px rgb(25 45 34 / 8%);
+  overflow-wrap: anywhere;
+}
+
+#scene .message p {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.47;
+  white-space: pre-wrap;
+}
+
+.patient-message {
+  align-self: flex-start;
+  border-top-left-radius: 3px;
+  background: var(--surface-raised);
+}
+
+.learner-message {
+  align-self: flex-end;
+  border-color: color-mix(in srgb, var(--green) 20%, var(--line));
+  border-top-right-radius: 3px;
+  background: var(--green-wash);
+}
+
 .turn-feedback { width: min(88%, 620px); margin: 4px 0 0; border-radius: 12px; background: var(--surface-raised); }
 .turn-feedback > summary { padding: 10px 13px; font-size: .88rem; }
 .turn-feedback > :not(summary) { margin-inline: 13px; }
@@ -937,8 +971,8 @@ button.secondary:hover { border-color: var(--green); background: var(--green-was
   .chat-avatar { width: 42px; height: 42px; border-radius: 14px; }
   .chat-header h2 { font-size: 1rem; }
   .chat-log { gap: 18px; padding: 20px 15px; }
-  .message, .turn-feedback { max-width: 94%; }
-  .message { padding: 13px 14px; }
+  .message { max-width: 88%; padding: 8px 11px; }
+  .turn-feedback { max-width: 94%; }
   .chat-composer { padding: 18px 15px 20px; }
   .composer-actions { display: grid; grid-template-columns: 1fr; }
   .composer-actions button { width: 100%; }
@@ -963,10 +997,6 @@ button.secondary:hover { border-color: var(--green); background: var(--green-was
   max-height: min(58vh, 32rem);
   overflow-y: auto;
   align-content: start;
-}
-
-.chat-turn .patient-message {
-  align-self: flex-start;
 }
 
 .chat-turn .turn-feedback {
