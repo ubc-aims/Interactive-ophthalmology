@@ -8,27 +8,27 @@ const theme = document.querySelector("#theme");
 const steps = [
   {
     label: "History",
-    objective: "Take a focused red-eye history. Ask about vision change, pain, light sensitivity, contact lenses, injury, and recent procedures. Clarify the redness and lid bump.",
+    objective: clinicalStandard.objectives.history,
     render: interview
   },
   {
     label: "Examination",
-    objective: "Check visual acuity, pupils, eye movements, lids, cornea, and anterior chamber. Use the photos and exam findings to identify which structures are involved.",
+    objective: clinicalStandard.objectives.examination,
     render: examination
   },
   {
     label: "Preceptor",
-    objective: "Present a concise case summary. State your working diagnosis, support it with key findings, compare relevant alternatives, and explain the urgency.",
+    objective: clinicalStandard.objectives.preceptor,
     render: () => discussion("preceptor")
   },
   {
     label: "Counselling",
-    objective: "Explain the likely cause to Sarah in everyday language. Discuss what she can do, when to recheck the bump, and which symptoms need urgent assessment.",
+    objective: clinicalStandard.objectives.counselling,
     render: () => discussion("counselling")
   }
 ];
 
-let step, seenHistory, seenExam, interviewTurns, manualChecks, assessments, activeHints;
+let step, seenHistory, seenExam, interviewTurns, manualChecks, assessments, activeHints, examInterpretations, counsellingTurns;
 let chatKey;
 
 function element(tag, text, className) {
@@ -51,6 +51,8 @@ function start() {
   seenHistory = new Map();
   interviewTurns = [];
   seenExam = new Map();
+  examInterpretations = new Map();
+  counsellingTurns = [];
   observationInput.value = "";
   manualChecks = new Set();
   assessments = new Map();
@@ -92,7 +94,7 @@ function render() {
   progress.max = steps.length;
   progress.value = Math.max(0, step);
   progress.setAttribute("aria-label", "Completed case stages");
-  const label = step < 0 ? "Stage 0 · Introduction" : stage ? `Stage ${step + 1} of ${steps.length}` : "Case complete";
+  const label = step < 0 ? "Introduction" : stage ? `Stage ${step + 1} of ${steps.length}` : "Case complete";
   const caption = element("p", label, "progress-caption");
   stages.replaceChildren(caption, progress, list);
   scene.replaceChildren();
@@ -112,23 +114,14 @@ function introduction() {
   scene.append(element("p", "You’re seeing Sarah, a 32-year-old with a red eye. Your task is to work out what’s causing it, decide how urgent it is, and explain your plan."));
   scene.append(element("h3", "Learning objectives"));
   const objectives = element("ol");
-  for (const [label, detail] of [
-    ["History", "Elicit the story and check for symptoms or exposures that change urgency."],
-    ["Examination", "Use the eye exam to identify where the problem is."],
-    ["Preceptor", "Present your findings, working diagnosis, alternatives, and urgency."],
-    ["Counselling", "Explain the plan and when Sarah should seek further care."]
-  ]) {
+  for (const [label, detail] of clinicalStandard.stationGuide) {
     const item = element("li");
     item.append(element("strong", label), element("p", detail));
     objectives.append(item);
   }
   scene.append(objectives, element("h3", "A focused red-eye history"));
   const guide = element("ul");
-  for (const detail of [
-    "Start with an open question. Ask when it began, which eye is affected, and how it has changed.",
-    "Ask about changes in vision, eye pain, and light sensitivity. Check for contact lens use, injury, chemical exposure, and recent eye procedures.",
-    "Ask about itch, discharge, and the feeling of something in the eye. Clarify any lid symptoms and what the patient has already tried."
-  ]) {
+  for (const detail of clinicalStandard.historyGuide) {
     guide.append(element("li", detail));
   }
   scene.append(guide,
@@ -189,7 +182,7 @@ function interview() {
   send.disabled = true;
   const proceed = button("Next: Examination", "secondary", next);
   const end = element("div", "", "stage-end");
-  end.append(proceed);
+  end.append(button("Request feedback", "secondary", () => showFeedback("history")), proceed);
   const options = [clinicalCase.reason, clinicalCase.story, ...clinicalCase.history.flatMap(topic => topic.questions)];
   let selected;
   let pending = false;
@@ -274,6 +267,7 @@ function interview() {
     send.disabled = true;
     pending = true;
     proceed.disabled = true;
+    end.firstElementChild.disabled = true;
     draft.readOnly = true;
     turnStatus.textContent = "";
     try {
@@ -305,6 +299,7 @@ function interview() {
       pending = false;
       draft.readOnly = false;
       proceed.disabled = false;
+      end.firstElementChild.disabled = false;
       send.disabled = !draft.value.trim();
       draft.focus();
     }
@@ -325,7 +320,7 @@ function enterToSend(input, form) {
 
 function atlasPhotos(photos) {
   const panel = element("div", "", "atlas-panel");
-  panel.append(element("p", "Compare the lid contour and lash bases in these EyeRounds teaching photos, then reveal Sarah’s exam findings."));
+  panel.append(element("p", "EyeRounds reference images"));
   const gallery = element("div", "", "atlas-gallery");
   for (const photo of photos) {
     const figure = element("figure");
@@ -348,7 +343,7 @@ function atlasPhotos(photos) {
 function historyFeedback() {
   const panel = element("details", "", "history-feedback");
   panel.open = true;
-  panel.append(element("summary", "History feedback"));
+  panel.append(element("summary", "Interview review"));
   const objectives = element("p", steps[0].objective);
   const status = element("p", "", "chat-status");
   status.setAttribute("role", "status");
@@ -397,50 +392,150 @@ function historyFeedback() {
 
 function examination() {
   heading("Examine the eye");
-  scene.append(historyFeedback(), element("p", "Choose each exam component. Inspect the lid photos before revealing the findings.", "stage-objective"));
-  const actions = element("div", "", "actions");
-  const panel = element("div");
-  const proceed = button("Next: Preceptor", "primary", next);
-  proceed.disabled = true;
-  for (const { id, label, reply, photos } of clinicalCase.exam) {
-    const choice = button(label, "choice", () => {
-      const detail = element("p", "", "feedback");
-      detail.setAttribute("role", "status");
-      function reveal() {
-        seenExam.set(id, [label, reply]);
-        choice.setAttribute("aria-pressed", "true");
-        detail.textContent = reply;
-        proceed.disabled = seenExam.size !== clinicalCase.exam.length;
-        renderNotes();
-      }
-      panel.replaceChildren();
-      if (photos) panel.append(atlasPhotos(photos));
-      if (photos && !seenExam.has(id)) {
-        const inspect = button("Reveal lid findings", "secondary", () => {
-          inspect.hidden = true;
-          reveal();
-          detail.tabIndex = -1;
-          detail.focus();
-        });
-        panel.append(inspect);
-      } else {
-        reveal();
-      }
-      panel.append(detail);
-    });
-    choice.setAttribute("aria-pressed", "false");
-    actions.append(choice);
+  scene.append(element("p", "Select an area or choose a test, then record your interpretation."));
+  const map = element("figure", "", "exam-map");
+  const eye = element("div", "", "eye-figure");
+  const image = element("img");
+  image.src = clinicalCase.examMap.image;
+  image.alt = "Reference photo of the front of a human eye";
+  eye.append(image);
+  const caption = element("figcaption");
+  const imageCredit = element("a", clinicalCase.examMap.credit);
+  imageCredit.href = clinicalCase.examMap.source;
+  caption.append(imageCredit);
+  map.append(eye, caption);
+
+  const actions = element("div", "", "exam-actions");
+  const panel = element("section", "", "exam-result");
+  panel.hidden = true;
+  panel.setAttribute("aria-label", "Selected examination");
+  const choices = [];
+  function reveal(test, choice) {
+    const { id, label, reply, photos } = test;
+    if (!seenExam.has(id)) seenExam.set(id, [label, reply]);
+    for (const item of choices) item.setAttribute("aria-pressed", String(item === choice));
+    choice.dataset.completed = "true";
+    const input = element("textarea");
+    input.id = "exam-interpretation-" + id;
+    input.rows = 2;
+    input.placeholder = "Normal or abnormal? Describe what you see or what the result means.";
+    input.value = examInterpretations.get(id) || "";
+    input.addEventListener("input", () => { examInterpretations.set(id, input.value); });
+    const fieldLabel = element("label", "Your interpretation", "composer-label");
+    fieldLabel.htmlFor = input.id;
+    const title = element("h3", label);
+    title.tabIndex = -1;
+    panel.replaceChildren(title);
+    if (photos) panel.append(atlasPhotos(photos));
+    panel.append(element("p", reply), fieldLabel, input);
+    panel.hidden = false;
+    renderNotes();
+    title.focus();
   }
-  const hints = element("p", "Start with vision in each eye. Inspect the lid contour and lash bases, then check whether the redness involves the cornea or anterior chamber.");
+  for (const test of clinicalCase.exam) {
+    const choice = button(test.marker || test.label, test.spot ? "eye-hotspot" : "choice", () => reveal(test, choice));
+    choice.setAttribute("aria-pressed", "false");
+    if (test.spot) {
+      choice.style.setProperty("--spot-x", test.spot[0] + "%");
+      choice.style.setProperty("--spot-y", test.spot[1] + "%");
+      choice.title = test.label;
+      choice.setAttribute("aria-label", test.label);
+      eye.append(choice);
+    } else actions.append(choice);
+    choices.push(choice);
+  }
+  const hints = element("p", "Start with visual acuity. Then select the exams that address what you learned in the history.");
   activeHints = hints;
-  scene.append(actions, panel, proceed);
+  const end = element("div", "", "stage-end");
+  end.append(button("Request feedback", "secondary", () => showFeedback("examination")), button("Next: Preceptor", "primary", next));
+  scene.append(map, actions, panel, end);
+}
+
+function examEvidence() {
+  return {
+    selected: [...seenExam].map(([id, [label, finding]]) => ({ id, label, finding, interpretation: examInterpretations.get(id) || "" })),
+    missed: clinicalCase.exam.filter(test => !test.optional && !seenExam.has(test.id)).map(test => test.label),
+    additional: clinicalCase.exam.filter(test => test.optional && seenExam.has(test.id)).map(test => ({ id: test.id, purpose: test.purpose }))
+  };
+}
+
+function showFeedback(phase) {
+  const names = { history: "History feedback", examination: "Examination feedback", counselling: "Counselling feedback" };
+  const saved = [...scene.childNodes];
+  const previousFocus = document.activeElement;
+  scene.replaceChildren();
+  scene.classList.remove("chat-scene");
+  heading(names[phase]);
+  const back = button("Back to " + steps[step].label.toLowerCase(), "secondary", () => {
+    scene.replaceChildren(...saved);
+    scene.classList.toggle("chat-scene", step !== 1);
+    previousFocus?.focus();
+  });
+  if (phase === "history") scene.append(historyFeedback());
+  if (phase === "examination") {
+    const evidence = examEvidence();
+    const sequence = evidence.selected.map(test => test.label).join(" → ");
+    scene.append(element("p", sequence ? "Exam sequence: " + sequence : "You haven’t selected an exam yet."));
+    if (evidence.missed.length) scene.append(element("p", "Core exam components missed: " + evidence.missed.join(", ") + "."));
+    if (evidence.additional.some(test => test.id === "dilation")) {
+      scene.append(element("p", "A routine dilated exam is not part of this focused anterior exam. Explain what finding or concern would justify it."));
+    }
+    const recorded = evidence.selected.map(test => ({ test: test.id, interpretation: test.interpretation }));
+    requestAssessment("examination", JSON.stringify(recorded), {
+      objective: steps[1].objective,
+      encountered_red_flags: [...seenHistory.values()].filter(item => item.kind !== "review").map(item => item.note),
+      ...evidence
+    });
+  }
+  if (phase === "counselling") {
+    requestAssessment("counselling", counsellingTurns.map(turn => turn.question).join("\n"), {
+      objective: steps[3].objective,
+      plan: clinicalCase.checkpoints.plan.modelResponse,
+      transcript: counsellingTurns
+    });
+  }
+  scene.append(back);
+  scene.querySelector("h2").focus();
+}
+
+function requestAssessment(phase, text, evidence) {
+  const status = element("p", "Reviewing your work…", "chat-status");
+  status.setAttribute("role", "status");
+  scene.append(status);
+  if (!text.trim()) {
+    status.textContent = "Send a counselling message before requesting feedback.";
+    return;
+  }
+  const currentRun = assessments;
+  assessLearner(chatKey, phase, text, evidence).then(feedback => {
+    if (assessments !== currentRun) return;
+    assessments.set(phase, feedback);
+    if (status.isConnected) status.replaceWith(assessmentDisplay(phase, feedback));
+  }).catch(() => {
+    status.textContent = "DeepSeek feedback is unavailable. You can go back and request it again.";
+  });
+}
+
+function counsellingReply(text) {
+  if (/in your own words|teach[ -]?back|tell me what you(?:’|')ll do|tell me what you will do/i.test(text)) {
+    const explained = [...counsellingTurns.map(turn => turn.question), text].join(" ");
+    if (/warm compress|warm (?:cloth|towel)/i.test(explained)) {
+      return "I’ll put a warm cloth on the lid. I’m still a little unsure when I should come back.";
+    }
+    return "I’m still not sure what to do for the bump when I get home. Could we go over that?";
+  }
+  return [
+    "What should I do when I get home?",
+    "When should I come back or get help sooner?",
+    "Okay, that helps. Is there anything else I should know?"
+  ][Math.min(counsellingTurns.length, 2)];
 }
 
 function discussion(phase) {
   const isPreceptor = phase === "preceptor";
   const speaker = isPreceptor ? "Preceptor" : clinicalCase.patient;
   const opening = isPreceptor
-    ? "Tell me what you found, what you think is going on, and what else you considered."
+    ? "Hi, how are you doing? Tell me about your patient."
     : "What do you think the bump is? What should I do about it?";
   const header = element("div", "", "chat-header");
   heading(speaker);
@@ -461,10 +556,14 @@ function discussion(phase) {
   send.disabled = true;
   const status = element("p", "", "chat-status");
   status.setAttribute("role", "status");
-  const proceed = button(isPreceptor ? "Return to Sarah" : "View feedback", "secondary", next);
+  const proceed = button(isPreceptor ? "Return to Sarah" : "Finish case", "secondary", next);
   const end = element("div", "", "stage-end");
   proceed.disabled = true;
+  const request = isPreceptor ? null : button("Request feedback", "secondary", () => showFeedback("counselling"));
+  if (request) end.append(request);
   end.append(proceed);
+  const transcript = [];
+  let ready = false;
   let pending = false;
   draft.addEventListener("input", () => { send.disabled = pending || !draft.value.trim(); });
   enterToSend(draft, composer);
@@ -472,31 +571,27 @@ function discussion(phase) {
     event.preventDefault();
     const text = draft.value.trim();
     if (!text || pending || !chatKey) return;
-    const { turn, waiting } = sentMessage(log, text, "Reviewing your message…");
+    const { turn, waiting } = sentMessage(log, text, speaker + " is typing…");
     draft.value = "";
     pending = true;
     proceed.disabled = true;
+    if (request) request.disabled = true;
     send.disabled = true;
     draft.readOnly = true;
     status.textContent = "";
     try {
-      const feedback = await assessLearner(chatKey, phase, text, {
-        objective: steps[step].objective,
-        history: [...seenHistory.values()].filter(item => item.kind !== "review").map(item => item.note),
-        examination: [...seenExam.values()].map(([label, finding]) => ({ label, finding })),
-        student_checklist: [...manualChecks],
-        reference: isPreceptor ? {
-          diagnosis: "Chalazion with associated blepharitis and meibomian gland dysfunction.",
-          differential: "An external hordeolum is typically tender and located at the lash line. Conjunctivitis does not explain a discrete deep lid nodule.",
-          urgency: "Use the red flags actually checked and exam findings actually observed."
-        } : { plan: clinicalCase.checkpoints.plan.modelResponse }
-      });
-      assessments.set(phase, feedback);
+      const reply = isPreceptor
+        ? await respondAsPreceptor(chatKey, [...transcript, { question: text, reply: "" }], {
+          objective: steps[2].objective,
+          history: [...seenHistory.values()].filter(item => item.kind !== "review").map(item => item.note),
+          examination: examEvidence().selected
+        })
+        : { reply: counsellingReply(text), ready: true };
+      transcript.push({ question: text, reply: reply.reply });
+      if (!isPreceptor) counsellingTurns.push({ question: text, reply: reply.reply });
       waiting.remove();
-      turn.append(chatMessage(speaker, isPreceptor
-        ? "Review the feedback below. You can send a revised presentation or go back to Sarah."
-        : "Thanks for talking it through with me.", "patient"));
-      turn.append(assessmentDisplay(phase, feedback));
+      turn.append(chatMessage(speaker, reply.reply, "patient"));
+      ready = reply.ready;
       log.scrollTop = log.scrollHeight;
       status.textContent = "";
     } catch (error) {
@@ -505,14 +600,19 @@ function discussion(phase) {
       status.textContent = error.message;
     } finally {
       pending = false;
-      proceed.disabled = !assessments.has(phase);
+      proceed.disabled = !ready;
+      if (request) request.disabled = false;
       draft.readOnly = false;
       send.disabled = !draft.value.trim();
       draft.focus();
     }
   });
   const hints = element("ul");
-  for (const { label } of assessmentCriteria[phase]) hints.append(element("li", label));
+  if (isPreceptor) {
+    for (const text of clinicalStandard.preceptorOutline) hints.append(element("li", text));
+  } else {
+    for (const { label } of assessmentCriteria[phase]) hints.append(element("li", label));
+  }
   activeHints = hints;
   composer.append(draft, send);
   scene.append(header, stageObjective(), log, composer, status, end);
@@ -614,7 +714,7 @@ function debrief() {
   if (missed.length) scene.append(element("p", "History topics to revisit: " + missed.join(", ") + "."));
   const review = element("div", "", "review");
   for (const [phase, feedback] of assessments) {
-    const labels = { history: "History", preceptor: "Preceptor presentation", counselling: "Patient counselling" };
+    const labels = { history: "History", examination: "Examination", counselling: "Patient counselling" };
     review.append(element("h3", labels[phase]), assessmentDisplay(phase, feedback));
   }
   const guide = element("details");

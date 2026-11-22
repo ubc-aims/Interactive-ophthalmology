@@ -747,6 +747,186 @@ button.secondary:hover { border-color: var(--green); background: var(--green-was
 .clinical-finding dt { color: var(--ink); font-size: .8rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .clinical-finding dd { margin: 0; color: var(--ink-soft); font-size: .9rem; line-height: 1.5; }
 
+/* Interactive ocular examination: preserve the source image's full frame. */
+.exam-map {
+  min-width: 0;
+  margin: 22px 0 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-raised) 78%, var(--green-wash));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 45%);
+}
+
+.eye-figure {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: #101914;
+}
+
+.eye-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+
+  margin-inline: auto;
+}
+
+.eye-hotspot {
+  position: absolute;
+  z-index: 1;
+  top: var(--spot-y);
+  left: var(--spot-x);
+  display: grid;
+  width: clamp(42px, 5.4vw, 58px);
+  aspect-ratio: 1;
+  place-items: center;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--green-deep) 88%, transparent);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgb(14 28 21 / 32%), 0 5px 15px rgb(0 0 0 / 28%);
+  cursor: pointer;
+  font-size: .95rem;
+  font-weight: 800;
+  line-height: 1;
+  transition: background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.eye-hotspot::after {
+  position: absolute;
+  inset: -8px;
+  border: 1px solid rgb(255 255 255 / 58%);
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+}
+
+.eye-hotspot:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  background: var(--green);
+  box-shadow: 0 0 0 6px rgb(255 255 255 / 25%), 0 7px 18px rgb(0 0 0 / 34%);
+}
+
+.eye-hotspot[aria-pressed="true"] {
+  border-color: var(--focus);
+  background: var(--focus);
+  color: #17231c;
+  box-shadow: 0 0 0 5px rgb(255 255 255 / 28%), 0 0 0 8px color-mix(in srgb, var(--focus) 70%, transparent), 0 7px 18px rgb(0 0 0 / 34%);
+}
+
+.eye-hotspot[data-completed="true"]:not([aria-pressed="true"]) {
+  border-color: #c8edd5;
+  background: #276b49;
+}
+
+.exam-map figcaption {
+  padding: 8px 14px;
+  color: var(--ink-soft);
+  font-size: .83rem;
+  line-height: 1.45;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+  border: 0;
+}
+
+.exam-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  margin-block: 18px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-raised) 86%, var(--green-wash));
+}
+
+.exam-actions .choice {
+  min-height: 42px;
+  flex: 1 1 150px;
+  justify-content: center;
+  padding: 9px 13px;
+  border-radius: 10px;
+  font-size: .9rem;
+}
+
+.exam-result {
+  margin-block: 20px;
+  padding: clamp(16px, 2.5vw, 22px);
+  border: 1px solid color-mix(in srgb, var(--green) 25%, var(--line));
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--green-wash) 60%, var(--surface));
+}
+
+.exam-result label,
+.exam-result .result-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--green-deep);
+  font-weight: 750;
+}
+
+.exam-result textarea {
+  display: block;
+  width: 100%;
+  min-height: 108px;
+  padding: 12px 14px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-raised);
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.55;
+}
+
+.exam-result textarea::placeholder { color: var(--ink-soft); opacity: .8; }
+.exam-result textarea:focus-visible { border-color: var(--green); }
+
+.exam-feedback-choice {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 10px;
+  margin-block: 16px;
+}
+
+.exam-feedback-choice .choice {
+  min-height: 48px;
+  justify-content: flex-start;
+}
+
+.exam-feedback-choice .choice[aria-pressed="true"] {
+  border-color: var(--green);
+  background: var(--green-wash);
+  box-shadow: inset 0 0 0 1px var(--green), 0 3px 10px color-mix(in srgb, var(--green) 12%, transparent);
+}
+
+@media (max-width: 520px) {
+  .exam-map { margin-inline: -5px; border-radius: 14px; }
+  .eye-hotspot { width: 42px; border-width: 2px; font-size: .86rem; }
+  .eye-hotspot::after { inset: -6px; }
+  .exam-map figcaption { padding: 10px 12px; font-size: .79rem; }
+  .exam-actions { display: grid; grid-template-columns: 1fr; padding: 10px; }
+  .exam-actions .choice { width: 100%; }
+  .exam-feedback-choice { grid-template-columns: 1fr; }
+  .exam-result textarea { min-height: 120px; }
+}
+
 @media (max-width: 819px) {
   .layout:has(#scene.chat-scene) { grid-template-columns: minmax(0, 1fr); }
   #notes { position: static; }
@@ -1215,4 +1395,8 @@ main.shell {
 
 .history-feedback .clinical-finding {
   margin-top: 12px;
+}
+
+.stage-end > button + button {
+  margin-inline-start: 8px;
 }

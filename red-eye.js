@@ -102,10 +102,16 @@ const clinicalCase = {
       ]
     }
   ],
+  examMap: {
+    image: "assets/examination-eye.jpg",
+    source: "https://commons.wikimedia.org/wiki/File:Close_up_shot_of_the_human_eye,_9_August_2024.jpg",
+    credit: "Eye anatomy photo by Kookaaa · CC0 1.0"
+  },
   exam: [
     { id: "acuity", label: "Visual acuity", purpose: "Measure acuity in each eye and check for reduced vision.", reply: "Distance acuity is 20/20 in each eye with glasses." },
-    { id: "pupils", label: "Pupils and motility", purpose: "Look for abnormal pupils, painful or limited eye movements, and proptosis.", reply: "Pupils are equal and reactive. Eye movements are full and painless, with no proptosis." },
-    { id: "lids", label: "Lids and lashes", purpose: "Locate any bump and inspect the lash bases and gland openings.", reply: "There is a firm nodule within the right upper lid, away from the lash line. It is minimally tender. There are crusts at the lashes and plugged meibomian gland openings.",
+    { id: "pupils", label: "Pupils", spot: [49, 49], marker: "P", purpose: "Check pupil size and response to light.", reply: "Pupils are equal and reactive." },
+    { id: "motility", label: "Eye movements", purpose: "Check for painful or restricted movement and proptosis.", reply: "Eye movements are full and painless, with no proptosis." },
+    { id: "lids", label: "Lids and lashes", spot: [47, 32], marker: "L", purpose: "Locate any bump and inspect the lash bases and gland openings.", reply: "There is a firm nodule within the right upper lid, away from the lash line. It is minimally tender. There are crusts at the lashes and plugged meibomian gland openings.",
       photos: [
         {
           alt: "Close-up of an eyelid with a localized raised area",
@@ -122,7 +128,18 @@ const clinicalCase = {
           credit: "Cindy Montague, CRA (photographer) and Jesse Vislisel, MD (contributor)"
         }
       ] },
-    { id: "surface", label: "Cornea and anterior chamber", purpose: "Look for corneal staining, a focal infiltrate, or anterior chamber inflammation.", reply: "The conjunctiva is mildly injected. Fluorescein shows scattered superficial punctate staining. There is no focal corneal infiltrate or anterior chamber inflammation." }
+    { id: "conjunctiva", label: "Conjunctiva", spot: [75, 50], marker: "J", purpose: "Assess the location and degree of redness.", reply: "The conjunctiva is mildly injected." },
+    { id: "surface", label: "Cornea and anterior chamber", spot: [64, 62], marker: "C", purpose: "Look for corneal staining, a focal infiltrate, or anterior chamber inflammation.", reply: "Fluorescein shows scattered superficial punctate staining. There is no focal corneal infiltrate or anterior chamber inflammation.",
+      photos: [{
+        alt: "Cornea after fluorescein showing scattered bright punctate staining",
+        label: "Fluorescein reference",
+        src: "https://eyerounds.org/atlas/pages/punctate-epithelial-erosions-3/PEE-LRG.jpg",
+        source: "https://eyerounds.org/atlas/pages/punctate-epithelial-erosions-3/index.htm",
+        credit: "Stefani Karakas, CRA (photographer) and Jesse Vislisel, MD (contributor)"
+      }] },
+    { id: "vitals", label: "Vital signs", optional: true, purpose: "Review systemic observations if needed.", reply: "Systemic vital signs are not provided in this case." },
+    { id: "pressure", label: "Intraocular pressure", optional: true, purpose: "Consider pressure measurement when the history or exam raises concern for elevated pressure and it is safe to measure.", reply: "An intraocular pressure measurement is not provided in this case." },
+    { id: "dilation", label: "Dilated fundus exam", optional: true, purpose: "Consider a posterior examination if the symptoms or findings point beyond the anterior eye.", reply: "A dilated fundus examination is not provided in this case." }
   ],
   checkpoints: {
     safety: {
@@ -177,12 +194,5 @@ const clinicalCase = {
     ["Use the findings to narrow the differential", "A focal lid nodule suggests a lid process. Prominent itch suggests allergy, and discharge can point toward conjunctivitis. A corneal infiltrate raises concern for microbial keratitis. Anterior chamber cells with pain and photophobia suggest anterior uveitis. Acute blurred vision with nausea, a hazy cornea, and a fixed mid-dilated pupil suggests acute angle closure."],
     ["Choose disposition", "Explain the likely cause and the plan. Escalate promptly when concerning symptoms or signs suggest a corneal or intraocular process."]
   ],
-  references: [
-    ["AAO adult eye evaluation", "https://www.aao.org/Assets/1560bf29-4499-41fc-8569-b5b18cd8d210/636125702218170000/comprehensive-adult-medical-eye-evaluation-ppp-pdf"],
-    ["AAO bacterial keratitis evaluation", "https://www.aao.org/Assets/aef4cf4e-860e-42f9-927e-fd29d72bc610/636492185327430000/bc-2208-pppsummarybenchmarks-17-pdf#page=17"],
-    ["AAO EyeWiki on-call triage", "https://eyewiki.aao.org/On_Call_Ophthalmology"],
-    ["AAO EyeWiki on conjunctivitis", "https://eyewiki.org/Conjunctivitis"],
-    ["AAO EyeWiki on anterior uveitis", "https://eyewiki.org/Acute_Anterior_Uveitis"],
-    ["MSD Manual on chalazion and hordeolum", "https://www.msdmanuals.com/professional/eye-disorders/eyelid-and-lacrimal-disorders/chalazion-and-hordeolum-stye"]
-  ]
+  references: clinicalStandard.references
 };
