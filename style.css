@@ -880,3 +880,29 @@ button.secondary:hover { border-color: var(--green); background: var(--green-was
   font-size: .82rem;
   font-weight: 700;
 }
+
+.chat-unlock {
+  padding: 16px clamp(20px, 4vw, 38px);
+  border-top: 1px solid var(--line);
+  background: var(--green-wash);
+}
+
+.chat-unlock input {
+  max-width: 100%;
+  min-height: 44px;
+  margin: 0 10px 8px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.chat-status {
+  margin: 8px 0 0;
+  font-size: .9rem;
+}
+
+.chat-status:empty {
+  display: none;
+}

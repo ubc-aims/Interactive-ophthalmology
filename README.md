@@ -24,3 +24,11 @@ The lid examination uses two original University of Iowa EyeRounds atlas images,
 
 - Jordan Graff, MD. [Lid contour photograph](https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/Chalazion-2-.html)
 - Cindy Montague, CRA (photographer), and Jesse Vislisel, MD (contributor). [Lash base photograph](https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/blepharitis/index.htm)
+
+## Enable free-form chat
+
+Run `node tools/encrypt-key.mjs` in this directory and enter the dedicated OpenRouter key and class passphrase at the hidden prompts. To use a private file, run `node tools/encrypt-key.mjs --input /absolute/path/to/credentials.json` with the fields `apiKey` and `passphrase`. Keep that input file outside the repository. Publish the generated `openrouter-key.enc.json` alongside `index.html`. The unlock uses browser Web Crypto over HTTPS or localhost. Guided questions also work when the encrypted file is absent.
+
+The vault uses AES-256-GCM and PBKDF2-HMAC-SHA-256. OWASP lists “600,000 iterations” for PBKDF2-HMAC-SHA-256 in **PBKDF2**. The browser holds the decrypted key for the interview. Anyone with the passphrase can recover it. [OWASP password storage guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2)
+
+[DeepSeek V4 Flash 0731](https://openrouter.ai/deepseek/deepseek-v4-flash-0731) maps typed questions to authored responses. The model returns question IDs and a coaching verdict using [OpenRouter structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs). The browser validates the IDs, displays Sarah’s authored replies, and updates the checklist. Only new questions and the interview text needed for context go to OpenRouter.

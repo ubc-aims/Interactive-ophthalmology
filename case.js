@@ -14,7 +14,7 @@ const steps = [
   ["Debrief", debrief]
 ];
 
-let step, seenHistory, seenExam, results;
+let step, seenHistory, seenExam, results, interviewTurns;
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -34,6 +34,7 @@ function start() {
   notes.replaceChildren();
   step = 0;
   seenHistory = new Map();
+  interviewTurns = [];
   seenExam = new Map();
   results = new Map();
   render();
@@ -115,15 +116,60 @@ function interview() {
   const options = clinicalCase.history.flatMap(topic => topic.questions);
   let selected;
   let lastFeedback;
+  let key;
+  let pending = false;
 
-  function showSuggestions(after) {
+  const unlock = element("form", "", "chat-unlock");
+  const passwordLabel = element("label", "Class passphrase", "composer-label");
+  passwordLabel.htmlFor = "chat-passphrase";
+  const password = element("input");
+  password.id = "chat-passphrase";
+  password.type = "password";
+  password.autocomplete = "off";
+  password.required = true;
+  const unlockButton = element("button", "Unlock chat", "secondary");
+  unlockButton.type = "submit";
+  const status = element("p", "", "chat-status");
+  status.setAttribute("role", "status");
+  unlock.append(passwordLabel, password, unlockButton,
+    element("p", "Typed questions are sent to OpenRouter. Keep them about Sarah’s case.", "muted"), status);
+  const turnStatus = element("p", "", "chat-status");
+  turnStatus.setAttribute("role", "status");
+
+  unlock.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (unlockButton.disabled || !password.value) return;
+    unlockButton.disabled = true;
+    status.textContent = "Unlocking…";
+    try {
+      key = await unlockOpenRouterKey(password.value);
+      password.value = "";
+      unlock.hidden = true;
+      draft.readOnly = false;
+      draft.placeholder = "Type a question for Sarah";
+      turnStatus.textContent = "Free-form chat unlocked.";
+      draft.focus();
+    } catch (error) {
+      status.textContent = error.message;
+    } finally {
+      unlockButton.disabled = false;
+    }
+  });
+
+  draft.addEventListener("input", () => {
+    selected = undefined;
+    send.disabled = !key || !draft.value.trim() || pending;
+  });
+
+  function showSuggestions(recentIds = []) {
     const available = options.filter(item =>
       !seenHistory.has(item.id) && (!item.requires || seenHistory.has(item.requires))
     );
-    const related = available.filter(item => item.requires === after && item.requires);
+    const related = available.filter(item => recentIds.includes(item.requires));
     const suggested = [...related, ...available.filter(item => !related.includes(item))].slice(0, 3);
     function choice(item) {
       const option = button(item.question, "suggestion", () => {
+        if (pending) return;
         selected = item;
         draft.value = item.question;
         send.disabled = false;
@@ -137,43 +183,87 @@ function interview() {
     if (!available.length) suggestions.append(element("p", "You can finish the interview.", "muted"));
   }
 
-  composer.addEventListener("submit", event => {
-    event.preventDefault();
-    if (!selected) return;
-    const item = selected;
+  function addTurn(question, reply, verdict, explanation, kind) {
     const turn = element("div", "", "chat-turn");
     const feedback = element("details", "", "turn-feedback");
     feedback.open = true;
     if (lastFeedback) lastFeedback.open = false;
-    feedback.dataset.kind = item.kind || "appropriate";
-    const verdict = item.kind === "review"
-      ? "Reconsider this question"
-      : item.requires ? "Appropriate follow-up" : "Appropriate question";
-    feedback.append(
-      element("summary", verdict),
-      element("p", item.feedback)
-    );
+    feedback.dataset.kind = kind;
+    feedback.append(element("summary", verdict), element("p", explanation));
     turn.append(
-      chatMessage("You", item.question, "learner"),
-      chatMessage(clinicalCase.patient, item.reply, "patient"),
+      chatMessage("You", question, "learner"),
+      chatMessage(clinicalCase.patient, reply, "patient"),
       feedback
     );
     log.append(turn);
     log.scrollTop = log.scrollHeight;
     lastFeedback = feedback;
-    seenHistory.set(item.id, item);
+    interviewTurns.push({ question, reply });
+  }
+
+  function applyAnswer(question, items, kind) {
+    if (kind === "off_topic") {
+      addTurn(question, "I’m not sure how to answer that. Could you ask me another way?",
+        "Try another question", "Ask one specific question about why Sarah came in or what she has noticed.", "review");
+      return;
+    }
+    const review = kind === "review";
+    const reply = items.map(item => item.reply).join(" ");
+    const verdict = review ? "Reconsider this question"
+      : items.some(item => item.requires) ? "Appropriate follow-up" : "Appropriate question";
+    const explanation = review && items.every(item => item.kind !== "review")
+      ? "Ask what Sarah has noticed and give her room to answer before drawing a conclusion."
+      : items.map(item => item.feedback).join(" ");
+    addTurn(question, reply, verdict, explanation, kind);
+    if (!review) {
+      for (const item of items) seenHistory.set(item.id, item);
+    } else {
+      for (const item of items.filter(item => item.kind === "review")) seenHistory.set(item.id, item);
+    }
+    showSuggestions(items.map(item => item.id));
+    renderNotes();
+  }
+
+  composer.addEventListener("submit", async event => {
+    event.preventDefault();
+    const question = draft.value.trim();
+    if (!question || pending || (!selected && !key)) return;
+    if (selected) {
+      applyAnswer(question, [selected], selected.kind || "appropriate");
+    } else {
+      pending = true;
+      send.disabled = true;
+      proceed.disabled = true;
+      draft.readOnly = true;
+      turnStatus.textContent = "Waiting for Sarah’s reply…";
+      try {
+        const result = await interpretPatientQuestion(key, question, options, interviewTurns);
+        const items = result.ids.map(id => options.find(item => item.id === id));
+        const kind = items.some(item => item.kind === "review") ? "review" : result.kind;
+        applyAnswer(question, items, kind);
+        turnStatus.textContent = "";
+      } catch (error) {
+        turnStatus.textContent = error.message;
+        send.disabled = false;
+        draft.focus();
+        return;
+      } finally {
+        pending = false;
+        draft.readOnly = false;
+        proceed.disabled = ![...seenHistory.values()].some(answer => answer.kind !== "review");
+      }
+    }
     selected = undefined;
     draft.value = "";
     send.disabled = true;
     proceed.disabled = ![...seenHistory.values()].some(answer => answer.kind !== "review");
-    showSuggestions(item.id);
-    renderNotes();
-    log.focus({ preventScroll: true });
+    if (key) draft.focus();
+    else log.focus({ preventScroll: true });
   });
 
   actions.append(proceed, send);
-  composer.append(label, draft, actions, element("p", "Suggested questions", "suggestion-label"), suggestions, more);
-  scene.append(header, log, composer);
+  composer.append(label, draft, actions, turnStatus, element("p", "Suggested questions", "suggestion-label"), suggestions, more);
+  scene.append(header, log, unlock, composer);
   showSuggestions();
 }
 
@@ -349,8 +439,8 @@ function renderNotes() {
   transcript.parentElement.hidden = step === 0;
   const entries = element("dl", "", "clinical-finding");
   entries.append(element("dt", clinicalCase.patient), element("dd", clinicalCase.opening));
-  for (const item of seenHistory.values()) {
-    entries.append(element("dt", item.question), element("dd", item.reply));
+  for (const { question, reply } of interviewTurns) {
+    entries.append(element("dt", question), element("dd", reply));
   }
   transcript.replaceChildren(entries);
 }
