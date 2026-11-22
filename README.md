@@ -6,7 +6,7 @@ Open [index.html](index.html) in a browser to run the case locally. The case use
 
 - Edit [red-eye.js](red-eye.js) to change the opening, interview topics, exam findings, checkpoints, and debrief. Each history topic has question objects with a patient reply, chart note, and coaching feedback. A question with `requires` becomes available after its prerequisite question is sent. A question marked `kind: "review"` provides corrective feedback and leaves the checklist open. Give each topic, question, and exam finding its own ID.
 - Each checkpoint has answer choices with IDs and a list of correct IDs. One correct ID produces radio buttons. Multiple correct IDs produce checkboxes. Single-answer choices carry their own explanations. A multi-answer checkpoint uses one shared explanation.
-- Edit the stage list in [case.js](case.js) to change when a checkpoint appears. Update the title and introduction in [index.html](index.html) when starting a different case.
+- Edit the stage list and learning objectives in [case.js](case.js), and the preceptor and counselling criteria in [assessor.js](assessor.js). Update the title in [index.html](index.html) when starting a different case.
 
 ## Clinical basis
 
@@ -27,8 +27,10 @@ The lid examination uses two original University of Iowa EyeRounds atlas images,
 
 ## Enable free-form chat
 
-Run `node tools/encrypt-key.mjs` in this directory and enter the dedicated OpenRouter key and class passphrase at the hidden prompts. To use a private file, run `node tools/encrypt-key.mjs --input /absolute/path/to/credentials.json` with the fields `apiKey` and `passphrase`. Keep that input file outside the repository. Publish the generated `openrouter-key.enc.json` alongside `index.html`. The unlock uses browser Web Crypto over HTTPS or localhost. Guided questions also work when the encrypted file is absent.
+Run `node tools/encrypt-key.mjs` in this directory and enter the dedicated OpenRouter key and class passphrase at the hidden prompts. To use a private file, run `node tools/encrypt-key.mjs --input /absolute/path/to/credentials.json` with the fields `apiKey` and `passphrase`. Keep that input file outside the repository. Publish the generated `openrouter-key.enc.json` alongside `index.html`. The unlock uses browser Web Crypto over HTTPS or localhost. The case remains locked until the browser decrypts the published file.
 
 The vault uses AES-256-GCM and PBKDF2-HMAC-SHA-256. OWASP lists “600,000 iterations” for PBKDF2-HMAC-SHA-256 in **PBKDF2**. The browser holds the decrypted key for the interview. Anyone with the passphrase can recover it. [OWASP password storage guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2)
 
 [DeepSeek V4 Flash 0731](https://openrouter.ai/deepseek/deepseek-v4-flash-0731) maps typed questions to authored responses. The model returns question IDs and a coaching verdict using [OpenRouter structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs). The browser validates the IDs, displays Sarah’s authored replies, and updates the checklist. Only new questions and the interview text needed for context go to OpenRouter.
+
+The four stages are History, Examination, Preceptor, and Counselling. History includes checking for red flags. Students write notes and tick their own checklist. Observed history and exam findings are recorded separately. The assessor receives the submitted presentation or counselling message, the stage objective and criteria, evidence gathered in the case, and the student checklist separately. It receives neither the student’s scratch notes nor the passphrase.

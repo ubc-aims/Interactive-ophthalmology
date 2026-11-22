@@ -1,6 +1,6 @@
 "use strict";
 
-async function interpretPatientQuestion(key, question, options, recent) {
+async function interpretPatientQuestion(key, question, options, recent, objective) {
   if (typeof key !== "string" || !key.trim()) throw new Error("An OpenRouter API key is required.");
   if (typeof question !== "string" || !question.trim()) throw new Error("A learner question is required.");
   if (!Array.isArray(options) || options.length === 0) throw new Error("Built-in question options are required.");
@@ -58,7 +58,7 @@ async function interpretPatientQuestion(key, question, options, recent) {
         },
         {
           role: "user",
-          content: JSON.stringify({ question, options: catalog, recent: context })
+          content: JSON.stringify({ objective, question, options: catalog, recent: context })
         }
       ]
     })

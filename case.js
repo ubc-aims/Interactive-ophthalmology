@@ -5,16 +5,30 @@ const notes = document.querySelector("#notes");
 const stages = document.querySelector("#stages");
 const theme = document.querySelector("#theme");
 const steps = [
-  ["History", interview],
-  ["Safety screen", () => checkpoint("safety")],
-  ["Examination", examination],
-  ["Key findings", () => checkpoint("findings")],
-  ["Diagnosis", () => checkpoint("diagnosis")],
-  ["Counselling", () => checkpoint("plan")],
-  ["Debrief", debrief]
+  {
+    label: "History",
+    objective: "Take a focused red-eye history. Ask about vision change, pain, light sensitivity, contact lenses, injury, and recent procedures. Clarify the redness and lid bump.",
+    render: interview
+  },
+  {
+    label: "Examination",
+    objective: "Check visual acuity, pupils, eye movements, lids, cornea, and anterior chamber. Use the photos and exam findings to identify which structures are involved.",
+    render: examination
+  },
+  {
+    label: "Preceptor",
+    objective: "Present a concise case summary. State your working diagnosis, support it with key findings, compare relevant alternatives, and explain the urgency.",
+    render: () => discussion("preceptor")
+  },
+  {
+    label: "Counselling",
+    objective: "Explain the likely cause to Sarah in everyday language. Discuss what she can do, when to recheck the bump, and which symptoms need urgent assessment.",
+    render: () => discussion("counselling")
+  }
 ];
 
-let step, seenHistory, seenExam, results, interviewTurns;
+let step, seenHistory, seenExam, interviewTurns, studentNotes, manualChecks, assessments, activeHints;
+let chatKey;
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -36,14 +50,16 @@ function start() {
   seenHistory = new Map();
   interviewTurns = [];
   seenExam = new Map();
-  results = new Map();
+  studentNotes = "";
+  manualChecks = new Set();
+  assessments = new Map();
   render();
 }
 
 function next() {
   step += 1;
   render();
-  if (step === 2) notes.querySelector("#notes-exam").open = true;
+  if (step === 1) notes.querySelector("#notes-exam").open = true;
 }
 
 function heading(title) {
@@ -54,20 +70,32 @@ function heading(title) {
 }
 
 function render() {
+  const stage = steps[step];
   const list = element("ol");
-  steps.forEach(([name], index) => {
-    const item = element("li", name);
+  steps.forEach(({ label }, index) => {
+    const item = element("li", label);
     if (index === step) item.setAttribute("aria-current", "step");
     list.append(item);
   });
-  stages.replaceChildren(list);
+  const progress = element("progress", "", "case-progress");
+  progress.max = steps.length;
+  progress.value = step;
+  progress.setAttribute("aria-label", "Completed case stages");
+  const caption = element("p", stage ? `Stage ${step + 1} of ${steps.length}` : "Case complete", "progress-caption");
+  stages.replaceChildren(caption, progress, list);
   scene.replaceChildren();
-  scene.classList.toggle("chat-scene", step === 0);
-  steps[step][1]();
+  activeHints = null;
+  scene.classList.toggle("chat-scene", Boolean(stage) && step !== 1);
+  if (stage) stage.render();
+  else debrief();
   renderNotes();
   const title = scene.querySelector("h2");
   title.focus({ preventScroll: true });
   if (title.getBoundingClientRect().top < 0) title.scrollIntoView({ block: "start" });
+}
+
+function stageObjective() {
+  return element("p", steps[step].objective, "stage-objective");
 }
 
 function chatMessage(speaker, message, side) {
@@ -96,91 +124,50 @@ function interview() {
   log.append(opening);
 
   const composer = element("form", "", "chat-composer");
-  const label = element("label", "Your message", "composer-label");
-  label.htmlFor = "draft";
   const draft = element("textarea");
   draft.id = "draft";
-  draft.rows = 2;
-  draft.readOnly = true;
-  draft.placeholder = "Choose a suggested question";
+  draft.rows = 1;
+  draft.setAttribute("aria-label", "Message to Sarah");
+  draft.placeholder = "Message to Sarah";
   const suggestions = element("div", "", "suggestions");
-  const more = element("details", "", "more-questions");
-  const moreSuggestions = element("div", "", "suggestions");
-  more.append(element("summary", "More questions"), moreSuggestions);
-  const actions = element("div", "", "composer-actions");
+  activeHints = suggestions;
   const send = element("button", "Send", "primary");
   send.type = "submit";
   send.disabled = true;
-  const proceed = button("Finish interview", "secondary", next);
+  const proceed = button("Start examination", "secondary", next);
   proceed.disabled = true;
+  const end = element("div", "", "stage-end");
+  end.hidden = true;
+  end.append(chatMessage(clinicalCase.patient, "I’m ready whenever you want to take a look at my eye.", "patient"), proceed);
   const options = clinicalCase.history.flatMap(topic => topic.questions);
   let selected;
   let lastFeedback;
-  let key;
   let pending = false;
-
-  const unlock = element("form", "", "chat-unlock");
-  const passwordLabel = element("label", "Class passphrase", "composer-label");
-  passwordLabel.htmlFor = "chat-passphrase";
-  const password = element("input");
-  password.id = "chat-passphrase";
-  password.type = "password";
-  password.autocomplete = "off";
-  password.required = true;
-  const unlockButton = element("button", "Unlock chat", "secondary");
-  unlockButton.type = "submit";
-  const status = element("p", "", "chat-status");
-  status.setAttribute("role", "status");
-  unlock.append(passwordLabel, password, unlockButton,
-    element("p", "Typed questions are sent to OpenRouter. Keep them about Sarah’s case.", "muted"), status);
   const turnStatus = element("p", "", "chat-status");
   turnStatus.setAttribute("role", "status");
 
-  unlock.addEventListener("submit", async event => {
-    event.preventDefault();
-    if (unlockButton.disabled || !password.value) return;
-    unlockButton.disabled = true;
-    status.textContent = "Unlocking…";
-    try {
-      key = await unlockOpenRouterKey(password.value);
-      password.value = "";
-      unlock.hidden = true;
-      draft.readOnly = false;
-      draft.placeholder = "Type a question for Sarah";
-      turnStatus.textContent = "Free-form chat unlocked.";
-      draft.focus();
-    } catch (error) {
-      status.textContent = error.message;
-    } finally {
-      unlockButton.disabled = false;
-    }
-  });
-
   draft.addEventListener("input", () => {
     selected = undefined;
-    send.disabled = !key || !draft.value.trim() || pending;
+    send.disabled = !draft.value.trim() || pending;
   });
+  enterToSend(draft, composer);
 
   function showSuggestions(recentIds = []) {
     const available = options.filter(item =>
       !seenHistory.has(item.id) && (!item.requires || seenHistory.has(item.requires))
     );
     const related = available.filter(item => recentIds.includes(item.requires));
-    const suggested = [...related, ...available.filter(item => !related.includes(item))].slice(0, 3);
     function choice(item) {
-      const option = button(item.question, "suggestion", () => {
+      return button(item.question, "suggestion", () => {
         if (pending) return;
         selected = item;
         draft.value = item.question;
         send.disabled = false;
-        send.focus();
+        draft.focus();
       });
-      return option;
     }
-    suggestions.replaceChildren(...suggested.map(choice));
-    moreSuggestions.replaceChildren(...available.filter(item => !suggested.includes(item)).map(choice));
-    more.hidden = moreSuggestions.childElementCount === 0;
-    if (!available.length) suggestions.append(element("p", "You can finish the interview.", "muted"));
+    suggestions.replaceChildren(...[...related, ...available.filter(item => !related.includes(item))].map(choice));
+    if (!available.length) suggestions.append(element("p", "You can finish the history.", "muted"));
   }
 
   function addTurn(question, reply, verdict, explanation, kind) {
@@ -227,7 +214,7 @@ function interview() {
   composer.addEventListener("submit", async event => {
     event.preventDefault();
     const question = draft.value.trim();
-    if (!question || pending || (!selected && !key)) return;
+    if (!question || pending || !chatKey) return;
     if (selected) {
       applyAnswer(question, [selected], selected.kind || "appropriate");
     } else {
@@ -237,7 +224,7 @@ function interview() {
       draft.readOnly = true;
       turnStatus.textContent = "Waiting for Sarah’s reply…";
       try {
-        const result = await interpretPatientQuestion(key, question, options, interviewTurns);
+        const result = await interpretPatientQuestion(chatKey, question, options, interviewTurns, steps[0].objective);
         const items = result.ids.map(id => options.find(item => item.id === id));
         const kind = items.some(item => item.kind === "review") ? "review" : result.kind;
         applyAnswer(question, items, kind);
@@ -257,14 +244,21 @@ function interview() {
     draft.value = "";
     send.disabled = true;
     proceed.disabled = ![...seenHistory.values()].some(answer => answer.kind !== "review");
-    if (key) draft.focus();
-    else log.focus({ preventScroll: true });
+    end.hidden = proceed.disabled;
+    draft.focus();
   });
 
-  actions.append(proceed, send);
-  composer.append(label, draft, actions, turnStatus, element("p", "Suggested questions", "suggestion-label"), suggestions, more);
-  scene.append(header, log, unlock, composer);
+  composer.append(draft, send);
+  scene.append(header, stageObjective(), log, composer, turnStatus, end);
   showSuggestions();
+}
+
+function enterToSend(input, form) {
+  input.addEventListener("keydown", event => {
+    if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+    event.preventDefault();
+    form.requestSubmit();
+  });
 }
 
 function atlasPhotos(photos) {
@@ -291,10 +285,10 @@ function atlasPhotos(photos) {
 
 function examination() {
   heading("Examine the eye");
-  scene.append(element("p", "Select each exam component. For the lids, inspect the reference photos before revealing the findings."));
+  scene.append(stageObjective(), element("p", "Select each exam component. For the lids, inspect the reference photos before revealing the findings."));
   const actions = element("div", "", "actions");
   const panel = element("div");
-  const proceed = button("Continue", "primary", next);
+  const proceed = button("Talk to preceptor", "primary", next);
   proceed.disabled = true;
   for (const { id, label, reply, photos } of clinicalCase.exam) {
     const choice = button(label, "choice", () => {
@@ -325,59 +319,106 @@ function examination() {
     choice.setAttribute("aria-pressed", "false");
     actions.append(choice);
   }
+  const hints = element("p", "Start with vision in each eye. Inspect the lid contour and lash bases, then check whether the redness involves the cornea or anterior chamber.");
+  activeHints = hints;
   scene.append(actions, panel, proceed);
 }
 
-function checkpoint(key) {
-  const quiz = clinicalCase.checkpoints[key];
-  heading(quiz.title);
-  const form = element("form");
-  const fields = element("fieldset");
-  fields.append(element("legend", quiz.prompt));
-  for (const [id, label] of quiz.choices) {
-    const row = element("label", "", "answer");
-    const input = element("input");
-    input.type = quiz.correct.length > 1 ? "checkbox" : "radio";
-    input.name = "answer";
-    input.value = id;
-    row.append(input, element("span", label));
-    fields.append(row);
-  }
-  const feedback = element("p", "", "feedback");
-  feedback.id = "quiz-feedback";
-  feedback.hidden = true;
-  feedback.setAttribute("role", "status");
-  const check = element("button", "Check answer", "primary");
-  check.type = "submit";
-  const proceed = button("Continue", "primary", next);
-  proceed.hidden = true;
-  form.append(fields, check, feedback, proceed);
-  form.addEventListener("submit", (event) => {
+function discussion(phase) {
+  const isPreceptor = phase === "preceptor";
+  const speaker = isPreceptor ? "Preceptor" : clinicalCase.patient;
+  const opening = isPreceptor
+    ? "Tell me what you found, what you think is going on, and what else you considered."
+    : "What do you think the bump is? What should I do about it?";
+  const header = element("div", "", "chat-header");
+  heading(speaker);
+  const identity = element("div", "", "chat-identity");
+  identity.append(scene.lastElementChild);
+  const notesLink = element("a", "Clinical notes", "chat-notes-link");
+  notesLink.href = "#notes";
+  header.append(identity, notesLink);
+  const log = element("div", "", "chat-log");
+  log.setAttribute("role", "log");
+  log.setAttribute("aria-label", "Conversation with " + speaker);
+  log.append(chatMessage(speaker, opening, "patient"));
+  const composer = element("form", "", "chat-composer");
+  const draft = element("textarea");
+  draft.rows = 1;
+  draft.setAttribute("aria-label", "Message to " + speaker);
+  draft.placeholder = "Message to " + speaker;
+  const send = element("button", "Send", "primary");
+  send.type = "submit";
+  send.disabled = true;
+  const status = element("p", "", "chat-status");
+  status.setAttribute("role", "status");
+  const proceed = button(isPreceptor ? "Return to Sarah" : "View feedback", "secondary", next);
+  const end = element("div", "", "stage-end");
+  end.hidden = true;
+  end.append(proceed);
+  let pending = false;
+  draft.addEventListener("input", () => { send.disabled = pending || !draft.value.trim(); });
+  enterToSend(draft, composer);
+  composer.addEventListener("submit", async event => {
     event.preventDefault();
-    const inputs = [...fields.querySelectorAll("input")];
-    const selected = inputs.filter(input => input.checked).map(input => input.value);
-    feedback.hidden = false;
-    if (!selected.length) {
-      feedback.textContent = "Select an answer before checking.";
-      return;
+    const text = draft.value.trim();
+    if (!text || pending || !chatKey) return;
+    pending = true;
+    proceed.disabled = true;
+    send.disabled = true;
+    draft.readOnly = true;
+    status.textContent = "Reviewing your response…";
+    try {
+      const feedback = await assessLearner(chatKey, phase, text, {
+        objective: steps[step].objective,
+        history: [...seenHistory.values()].filter(item => item.kind !== "review").map(item => item.note),
+        examination: [...seenExam.values()].map(([label, finding]) => ({ label, finding })),
+        student_checklist: [...manualChecks],
+        reference: isPreceptor ? {
+          diagnosis: "Chalazion with associated blepharitis and meibomian gland dysfunction.",
+          differential: "An external hordeolum is typically tender and located at the lash line. Conjunctivitis does not explain a discrete deep lid nodule.",
+          urgency: "Use the red flags actually checked and exam findings actually observed."
+        } : { plan: clinicalCase.checkpoints.plan.modelResponse }
+      });
+      assessments.set(phase, feedback);
+      const turn = element("div", "", "chat-turn");
+      turn.append(chatMessage("You", text, "learner"));
+      turn.append(chatMessage(speaker, isPreceptor
+        ? "Review the feedback below. You can send a revised presentation or go back to Sarah."
+        : "Thanks for talking it through with me.", "patient"));
+      turn.append(assessmentDisplay(phase, feedback));
+      log.append(turn);
+      log.scrollTop = log.scrollHeight;
+      draft.value = "";
+      status.textContent = "";
+      end.hidden = false;
+    } catch (error) {
+      status.textContent = error.message;
+    } finally {
+      pending = false;
+      proceed.disabled = false;
+      draft.readOnly = false;
+      send.disabled = !draft.value.trim();
+      draft.focus();
     }
-    const correct = selected.length === quiz.correct.length && quiz.correct.every(id => selected.includes(id));
-    const explanation = quiz.feedback || quiz.choices.find(([id]) => id === selected[0])[2];
-    const expected = quiz.choices.filter(([id]) => quiz.correct.includes(id)).map(([, label]) => label);
-    const message = (correct ? "Correct. " : "Expected response: " + expected.join(" / ") + ". ") + explanation;
-    results.set(key, { selected, message });
-    feedback.textContent = message;
-    if (quiz.modelResponse) {
-      const example = element("blockquote", quiz.modelResponse, "patient");
-      example.setAttribute("aria-label", "Example counselling");
-      form.insertBefore(example, proceed);
-    }
-    fields.disabled = true;
-    proceed.hidden = false;
-    proceed.focus();
-    check.hidden = true;
   });
-  scene.append(form);
+  const hints = element("ul");
+  for (const { label } of assessmentCriteria[phase]) hints.append(element("li", label));
+  activeHints = hints;
+  composer.append(draft, send);
+  scene.append(header, stageObjective(), log, composer, status, end);
+}
+
+function assessmentDisplay(phase, feedback) {
+  const section = element("div", "", "assessment-feedback");
+  section.append(element("h3", "Assessor feedback"));
+  const list = element("dl");
+  const statuses = { met: "Met", partial: "Develop further", missing: "Missing" };
+  for (const item of feedback) {
+    const criterion = assessmentCriteria[phase].find(entry => entry.id === item.id);
+    list.append(element("dt", criterion.label + " · " + statuses[item.status]), element("dd", item.feedback));
+  }
+  section.append(list);
+  return section;
 }
 
 function topicAnswers(topic) {
@@ -400,41 +441,49 @@ function notesSection(id, label, open) {
   return section.lastElementChild;
 }
 
-function historyChecklist(topics) {
-  const list = element("ul", "", "checklist");
-  for (const topic of topics) {
-    const answers = topicAnswers(topic);
-    const covered = topicCovered(topic);
-    const item = element("li", "", "check-item");
-    item.dataset.status = covered ? "covered" : "pending";
-    item.append(
-      element("span", topic.label, "check-label"),
-      element("span", covered ? "Checked" : answers.length ? "Ask more" : "To ask", "check-state")
-    );
-    if (answers.length) item.append(element("p", answers.map(answer => answer.note).join(" "), "check-evidence"));
-    list.append(item);
-  }
-  return list;
+function checkItem(list, id, label, observation, status) {
+  const item = element("li", "", "check-item");
+  const task = element("label", "", "task-checkbox");
+  const checkbox = element("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = manualChecks.has(id);
+  checkbox.addEventListener("change", () => {
+    if (checkbox.checked) manualChecks.add(id);
+    else manualChecks.delete(id);
+  });
+  task.append(checkbox, element("span", label, "check-label"));
+  item.append(task);
+  if (status) item.append(element("span", status, "check-state"));
+  if (observation) item.append(element("p", observation, "check-evidence"));
+  list.append(item);
 }
 
 function renderNotes() {
   if (!notes.childElementCount) {
     const title = element("h2", "Clinical notes");
     title.id = "notes-title";
-    notes.append(title);
+    const label = element("label", "Your notes", "composer-label");
+    label.htmlFor = "student-notes";
+    const entry = element("textarea", "", "student-notes");
+    entry.id = "student-notes";
+    entry.placeholder = "Write your observations and differential…";
+    entry.value = studentNotes;
+    entry.addEventListener("input", () => { studentNotes = entry.value; });
+    notes.append(title, label, entry);
   }
-  notesSection("safety", "Check for red flags", true).replaceChildren(
-    historyChecklist(clinicalCase.history.filter(topic => topic.priority))
-  );
-  notesSection("characterize", "Characterize the red eye", true).replaceChildren(
-    historyChecklist(clinicalCase.history.filter(topic => !topic.priority))
-  );
-  const exam = element("dl", "", "clinical-finding");
+  const history = element("ul", "", "checklist");
+  for (const topic of [...clinicalCase.history.filter(item => item.priority), ...clinicalCase.history.filter(item => !item.priority)]) {
+    const answers = topicAnswers(topic);
+    const status = topicCovered(topic) ? "Asked" : answers.length ? "Partial" : "";
+    checkItem(history, topic.id, topic.label, answers.map(item => item.note).join(" "), status);
+  }
+  notesSection("history", "History checklist", true).replaceChildren(history);
+  const exam = element("ul", "", "checklist");
   for (const { id, label, purpose } of clinicalCase.exam) {
     const found = seenExam.get(id);
-    exam.append(element("dt", label), element("dd", found ? found[1] : purpose));
+    checkItem(exam, "exam-" + id, label, found ? found[1] : purpose, found ? "Examined" : "");
   }
-  notesSection("exam", "Examination checklist", step > 1).replaceChildren(exam);
+  notesSection("exam", "Examination checklist", step === 1).replaceChildren(exam);
   const transcript = notesSection("transcript", "Interview transcript", false);
   transcript.parentElement.hidden = step === 0;
   const entries = element("dl", "", "clinical-finding");
@@ -443,6 +492,13 @@ function renderNotes() {
     entries.append(element("dt", question), element("dd", reply));
   }
   transcript.replaceChildren(entries);
+  const hints = notesSection("hints", "Hints", false);
+  hints.parentElement.className = "learner-hints";
+  hints.parentElement.hidden = !activeHints;
+  if (activeHints && hints.lastElementChild !== activeHints) {
+    hints.parentElement.open = false;
+    hints.replaceChildren(activeHints);
+  }
 }
 
 function debrief() {
@@ -450,10 +506,8 @@ function debrief() {
   const missed = clinicalCase.history.filter(item => !topicCovered(item)).map(item => item.label);
   if (missed.length) scene.append(element("p", "History topics to revisit: " + missed.join(", ") + "."));
   const review = element("div", "", "review");
-  for (const [key, result] of results) {
-    const quiz = clinicalCase.checkpoints[key];
-    const selected = quiz.choices.filter(([id]) => result.selected.includes(id)).map(([, label]) => label);
-    review.append(element("h3", quiz.title), element("p", "You chose: " + selected.join(" / ") + ".", "muted"), element("p", result.message));
+  for (const [phase, feedback] of assessments) {
+    review.append(element("h3", phase === "preceptor" ? "Preceptor presentation" : "Patient counselling"), assessmentDisplay(phase, feedback));
   }
   const guide = element("details");
   guide.open = true;
@@ -481,7 +535,10 @@ function debrief() {
 
 function applyTheme(setting) {
   document.documentElement.dataset.theme = setting;
-  theme.textContent = setting === "dark" ? "Light mode" : "Dark mode";
+  const label = setting === "dark" ? "Light mode" : "Dark mode";
+  theme.textContent = setting === "dark" ? "☀" : "☾";
+  theme.setAttribute("aria-label", label);
+  theme.title = label;
 }
 
 let themeSetting = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -496,4 +553,33 @@ theme.addEventListener("click", () => {
   try { localStorage.setItem("ophthalmology-theme", themeSetting); } catch {}
 });
 
+const app = document.querySelector("#case-app");
+const dialog = document.querySelector("#unlock-dialog");
+const unlockForm = document.querySelector("#unlock-form");
+const password = document.querySelector("#chat-passphrase");
+const unlockButton = document.querySelector("#unlock-button");
+const unlockStatus = document.querySelector("#unlock-status");
+
+dialog.addEventListener("cancel", event => event.preventDefault());
+unlockForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (unlockButton.disabled || !password.value) return;
+  unlockButton.disabled = true;
+  unlockStatus.textContent = "Unlocking…";
+  try {
+    chatKey = await unlockOpenRouterKey(password.value);
+    password.value = "";
+    app.inert = false;
+    app.classList.remove("locked");
+    dialog.close();
+    scene.querySelector("#draft").focus();
+  } catch (error) {
+    unlockStatus.textContent = error.message;
+    password.select();
+  } finally {
+    unlockButton.disabled = false;
+  }
+});
+
 start();
+dialog.showModal();
