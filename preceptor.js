@@ -3,7 +3,7 @@
 const preceptorStandard = typeof module !== "undefined" && module.exports
   ? require("./clinical-standard.js") : clinicalStandard;
 
-async function respondAsPreceptor(key, transcript, evidence) {
+async function respondAsPreceptor(key, transcript, evidence, retryLanguage = false) {
   if (typeof key !== "string" || !key.trim()) throw new Error("An OpenRouter API key is required.");
   if (!Array.isArray(transcript)) throw new Error("A preceptor transcript is required.");
   const turns = transcript.map(turn => {
@@ -44,7 +44,7 @@ async function respondAsPreceptor(key, transcript, evidence) {
       messages: [
         {
           role: "system",
-          content: preceptorStandard.prompts.preceptor
+          content: preceptorStandard.prompts.preceptor + (retryLanguage ? " The previous reply used a different writing system. Reply in English only." : "")
         },
         {
           role: "user",
@@ -77,7 +77,15 @@ async function respondAsPreceptor(key, transcript, evidence) {
       !result.reply.trim() || typeof result.ready !== "boolean") {
     throw new Error("OpenRouter returned an invalid preceptor response.");
   }
-  return { reply: result.reply, ready: result.ready };
+  const reply = result.reply.trim();
+  const containsNonLatinLetters = [...reply].some(character =>
+    /\p{Letter}/u.test(character) && !/\p{Script=Latin}/u.test(character)
+  );
+  if (containsNonLatinLetters) {
+    if (!retryLanguage) return respondAsPreceptor(key, transcript, evidence, true);
+    throw new Error("The preceptor could not return an English reply. Please send your message again.");
+  }
+  return { reply, ready: result.ready };
 }
 
 if (typeof globalThis !== "undefined") globalThis.respondAsPreceptor = respondAsPreceptor;
