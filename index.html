@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>The Red Eye | Interactive Ophthalmology</title>
-  <link rel="stylesheet" href="style.css?v=4">
-  <script src="red-eye.js?v=4" defer></script>
-  <script src="vault.js?v=4" defer></script>
-  <script src="openrouter.js?v=4" defer></script>
-  <script src="assessor.js?v=4" defer></script>
-  <script src="case.js?v=4" defer></script>
+  <link rel="stylesheet" href="style.css?v=6">
+  <script src="red-eye.js?v=6" defer></script>
+  <script src="vault.js?v=6" defer></script>
+  <script src="openrouter.js?v=6" defer></script>
+  <script src="assessor.js?v=6" defer></script>
+  <script src="case.js?v=6" defer></script>
 </head>
 <body>
   <div id="case-app" class="locked" inert>
@@ -38,7 +38,21 @@
       <input id="chat-passphrase" type="password" required autofocus autocomplete="off">
       <button id="unlock-button" class="primary" type="submit">Unlock</button>
       <p id="unlock-status" class="chat-status" role="status"></p>
+      <div id="local-key-picker" hidden>
+        <label for="local-key">Encrypted key file</label>
+        <input id="local-key" type="file" accept=".json,application/json">
+      </div>
       <p class="muted">Typed questions are sent to OpenRouter. Keep them about Sarah’s case.</p>
+    </form>
+  </dialog>
+  <dialog id="stage-confirmation" class="unlock-dialog" aria-labelledby="stage-confirmation-title">
+    <form method="dialog">
+      <h2 id="stage-confirmation-title">Move to the next stage?</h2>
+      <p id="stage-confirmation-message"></p>
+      <div class="confirmation-actions">
+        <button class="secondary" value="no" autofocus>No</button>
+        <button class="primary" value="yes">Yes</button>
+      </div>
     </form>
   </dialog>
   <noscript>Enable JavaScript to start the case.</noscript>

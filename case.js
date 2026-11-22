@@ -57,9 +57,19 @@ function start() {
 }
 
 function next() {
+  const dialog = document.querySelector("#stage-confirmation");
+  const message = document.querySelector("#stage-confirmation-message");
+  const target = steps[step + 1]?.label || "Case feedback";
+  message.textContent = "Next: " + target + ".";
+  dialog.returnValue = "";
+  dialog.showModal();
+}
+
+function confirmStageChange() {
+  const dialog = document.querySelector("#stage-confirmation");
+  if (dialog.returnValue !== "yes") return;
   step += 1;
   render();
-  if (step === 1) notes.querySelector("#notes-exam").open = true;
 }
 
 function heading(title) {
@@ -110,10 +120,8 @@ function interview() {
   avatar.setAttribute("aria-hidden", "true");
   const identity = element("div", "", "chat-identity");
   heading(clinicalCase.patient);
-  identity.append(scene.lastElementChild, element("span", "Patient interview"));
-  const notesLink = element("a", "Clinical notes", "chat-notes-link");
-  notesLink.href = "#notes";
-  header.append(avatar, identity, notesLink);
+  identity.append(scene.lastElementChild, element("span", clinicalCase.patientSummary));
+  header.append(avatar, identity);
 
   const log = element("div", "", "chat-log");
   log.setAttribute("role", "log");
@@ -134,12 +142,12 @@ function interview() {
   const send = element("button", "Send", "primary");
   send.type = "submit";
   send.disabled = true;
-  const proceed = button("Start examination", "secondary", next);
-  proceed.disabled = true;
+  const proceed = button("Next: Examination", "secondary", next);
   const end = element("div", "", "stage-end");
-  end.hidden = true;
-  end.append(chatMessage(clinicalCase.patient, "I’m ready whenever you want to take a look at my eye.", "patient"), proceed);
-  const options = clinicalCase.history.flatMap(topic => topic.questions);
+  const ready = chatMessage(clinicalCase.patient, "I’m ready to have you take a look when you are.", "patient");
+  ready.hidden = true;
+  end.append(ready, proceed);
+  const options = [clinicalCase.reason, ...clinicalCase.history.flatMap(topic => topic.questions)];
   let selected;
   let lastFeedback;
   let pending = false;
@@ -174,17 +182,17 @@ function interview() {
     const turn = element("div", "", "chat-turn");
     const feedback = element("details", "", "turn-feedback");
     feedback.open = true;
-    if (lastFeedback) lastFeedback.open = false;
+    if (verdict && lastFeedback) lastFeedback.open = false;
     feedback.dataset.kind = kind;
     feedback.append(element("summary", verdict), element("p", explanation));
     turn.append(
       chatMessage("You", question, "learner"),
-      chatMessage(clinicalCase.patient, reply, "patient"),
-      feedback
+      chatMessage(clinicalCase.patient, reply, "patient")
     );
+    if (verdict) turn.append(feedback);
     log.append(turn);
     log.scrollTop = log.scrollHeight;
-    lastFeedback = feedback;
+    if (verdict) lastFeedback = feedback;
     interviewTurns.push({ question, reply });
   }
 
@@ -194,16 +202,21 @@ function interview() {
         "Try another question", "Ask one specific question about why Sarah came in or what she has noticed.", "review");
       return;
     }
+    if (items.length === 1 && items[0].opening && kind === "appropriate") {
+      addTurn(question, items[0].reply);
+      return;
+    }
     const review = kind === "review";
     const reply = items.map(item => item.reply).join(" ");
     const verdict = review ? "Reconsider this question"
       : items.some(item => item.requires) ? "Appropriate follow-up" : "Appropriate question";
     const explanation = review && items.every(item => item.kind !== "review")
       ? "Ask what Sarah has noticed and give her room to answer before drawing a conclusion."
-      : items.map(item => item.feedback).join(" ");
+      : items.filter(item => !item.opening).map(item => item.feedback).join(" ");
     addTurn(question, reply, verdict, explanation, kind);
     if (!review) {
-      for (const item of items) seenHistory.set(item.id, item);
+      for (const item of items.filter(item => !item.opening)) seenHistory.set(item.id, item);
+      ready.hidden = seenHistory.size === 0;
     } else {
       for (const item of items.filter(item => item.kind === "review")) seenHistory.set(item.id, item);
     }
@@ -215,7 +228,9 @@ function interview() {
     event.preventDefault();
     const question = draft.value.trim();
     if (!question || pending || !chatKey) return;
-    if (selected) {
+    if (/^(?:(?:hi|hello|hey)(?:[,!.]\s*|\s+))?(?:how are you(?: doing)?(?: today)?)[?.!]*$|^(?:hi|hello|hey)[!.]*$/i.test(question)) {
+      addTurn(question, "Hi! I’m doing great, thanks.");
+    } else if (selected) {
       applyAnswer(question, [selected], selected.kind || "appropriate");
     } else {
       pending = true;
@@ -237,19 +252,17 @@ function interview() {
       } finally {
         pending = false;
         draft.readOnly = false;
-        proceed.disabled = ![...seenHistory.values()].some(answer => answer.kind !== "review");
+        proceed.disabled = false;
       }
     }
     selected = undefined;
     draft.value = "";
     send.disabled = true;
-    proceed.disabled = ![...seenHistory.values()].some(answer => answer.kind !== "review");
-    end.hidden = proceed.disabled;
     draft.focus();
   });
 
   composer.append(draft, send);
-  scene.append(header, stageObjective(), log, composer, turnStatus, end);
+  scene.append(header, log, composer, turnStatus, end);
   showSuggestions();
 }
 
@@ -285,10 +298,10 @@ function atlasPhotos(photos) {
 
 function examination() {
   heading("Examine the eye");
-  scene.append(stageObjective(), element("p", "Select each exam component. For the lids, inspect the reference photos before revealing the findings."));
+  scene.append(element("p", "Choose each exam component. Inspect the lid photos before revealing the findings.", "stage-objective"));
   const actions = element("div", "", "actions");
   const panel = element("div");
-  const proceed = button("Talk to preceptor", "primary", next);
+  const proceed = button("Next: Preceptor", "primary", next);
   proceed.disabled = true;
   for (const { id, label, reply, photos } of clinicalCase.exam) {
     const choice = button(label, "choice", () => {
@@ -334,9 +347,7 @@ function discussion(phase) {
   heading(speaker);
   const identity = element("div", "", "chat-identity");
   identity.append(scene.lastElementChild);
-  const notesLink = element("a", "Clinical notes", "chat-notes-link");
-  notesLink.href = "#notes";
-  header.append(identity, notesLink);
+  header.append(identity);
   const log = element("div", "", "chat-log");
   log.setAttribute("role", "log");
   log.setAttribute("aria-label", "Conversation with " + speaker);
@@ -353,7 +364,7 @@ function discussion(phase) {
   status.setAttribute("role", "status");
   const proceed = button(isPreceptor ? "Return to Sarah" : "View feedback", "secondary", next);
   const end = element("div", "", "stage-end");
-  end.hidden = true;
+  proceed.disabled = true;
   end.append(proceed);
   let pending = false;
   draft.addEventListener("input", () => { send.disabled = pending || !draft.value.trim(); });
@@ -390,12 +401,11 @@ function discussion(phase) {
       log.scrollTop = log.scrollHeight;
       draft.value = "";
       status.textContent = "";
-      end.hidden = false;
     } catch (error) {
       status.textContent = error.message;
     } finally {
       pending = false;
-      proceed.disabled = false;
+      proceed.disabled = !assessments.has(phase);
       draft.readOnly = false;
       send.disabled = !draft.value.trim();
       draft.focus();
@@ -477,13 +487,11 @@ function renderNotes() {
     const status = topicCovered(topic) ? "Asked" : answers.length ? "Partial" : "";
     checkItem(history, topic.id, topic.label, answers.map(item => item.note).join(" "), status);
   }
-  notesSection("history", "History checklist", true).replaceChildren(history);
   const exam = element("ul", "", "checklist");
   for (const { id, label, purpose } of clinicalCase.exam) {
     const found = seenExam.get(id);
     checkItem(exam, "exam-" + id, label, found ? found[1] : purpose, found ? "Examined" : "");
   }
-  notesSection("exam", "Examination checklist", step === 1).replaceChildren(exam);
   const transcript = notesSection("transcript", "Interview transcript", false);
   transcript.parentElement.hidden = step === 0;
   const entries = element("dl", "", "clinical-finding");
@@ -493,12 +501,23 @@ function renderNotes() {
   }
   transcript.replaceChildren(entries);
   const hints = notesSection("hints", "Hints", false);
-  hints.parentElement.className = "learner-hints";
-  hints.parentElement.hidden = !activeHints;
-  if (activeHints && hints.lastElementChild !== activeHints) {
-    hints.parentElement.open = false;
-    hints.replaceChildren(activeHints);
+  const details = hints.parentElement;
+  details.className = "learner-hints";
+  details.hidden = !steps[step];
+  if (details.dataset.step !== String(step)) {
+    details.dataset.step = String(step);
+    details.open = false;
   }
+  hints.replaceChildren();
+  if (step === 0) hints.append(element("h3", "History checklist"), history);
+  if (step === 1) hints.append(element("h3", "Examination checklist"), exam);
+  if (step > 1) {
+    const findings = element("details");
+    findings.append(element("summary", "Exam findings"), exam);
+    hints.append(findings);
+  }
+  if (activeHints) hints.append(activeHints);
+
 }
 
 function debrief() {
@@ -559,6 +578,10 @@ const unlockForm = document.querySelector("#unlock-form");
 const password = document.querySelector("#chat-passphrase");
 const unlockButton = document.querySelector("#unlock-button");
 const unlockStatus = document.querySelector("#unlock-status");
+const localKeyPicker = document.querySelector("#local-key-picker");
+const localKey = document.querySelector("#local-key");
+const openedLocally = window.location.protocol === "file:" && !globalThis.embeddedDemoVault;
+localKeyPicker.hidden = !openedLocally;
 
 dialog.addEventListener("cancel", event => event.preventDefault());
 unlockForm.addEventListener("submit", async event => {
@@ -567,19 +590,28 @@ unlockForm.addEventListener("submit", async event => {
   unlockButton.disabled = true;
   unlockStatus.textContent = "Unlocking…";
   try {
-    chatKey = await unlockOpenRouterKey(password.value);
+    const file = localKey.files?.[0];
+    if (openedLocally && !file) throw new Error("Choose openrouter-key.enc.json from the project folder.");
+    chatKey = await unlockOpenRouterKey(password.value, file);
     password.value = "";
+    localKey.value = "";
     app.inert = false;
     app.classList.remove("locked");
     dialog.close();
     scene.querySelector("#draft").focus();
   } catch (error) {
     unlockStatus.textContent = error.message;
-    password.select();
+    if (openedLocally || error.message.includes("Choose openrouter-key.enc.json")) {
+      localKeyPicker.hidden = false;
+      localKey.focus();
+    } else {
+      password.select();
+    }
   } finally {
     unlockButton.disabled = false;
   }
 });
 
+document.querySelector("#stage-confirmation").addEventListener("close", confirmStageChange);
 start();
 dialog.showModal();

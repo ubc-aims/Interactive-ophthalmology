@@ -2,7 +2,14 @@
 
 const clinicalCase = {
   patient: "Sarah",
-  opening: "My right eye keeps getting red. It feels gritty, and I’ve got a bump on my upper lid.",
+  patientSummary: "32-year-old female · Red eye",
+  opening: "Hi.",
+  reason: {
+    id: "reason_for_visit",
+    question: "What brings you in today?",
+    reply: "My right eye keeps getting red.",
+    opening: true
+  },
   history: [
     {
       id: "onset",

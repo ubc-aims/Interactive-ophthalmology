@@ -690,7 +690,6 @@ details > :last-child {
 .chat-identity { min-width: 0; flex: 1; }
 .chat-header h2 { margin: 0 0 3px; font: 700 1.1rem/1.25 ui-sans-serif, system-ui, sans-serif; letter-spacing: -.015em; }
 .chat-identity span { color: var(--ink-soft); font-size: .84rem; }
-.chat-notes-link { flex: 0 0 auto; font-size: .88rem; font-weight: 700; }
 
 .chat-log {
   display: grid;
@@ -757,7 +756,6 @@ button.secondary:hover { border-color: var(--green); background: var(--green-was
   .chat-header { gap: 11px; padding: 16px; }
   .chat-avatar { width: 42px; height: 42px; border-radius: 14px; }
   .chat-header h2 { font-size: 1rem; }
-  .chat-notes-link { font-size: .8rem; }
   .chat-log { gap: 18px; padding: 20px 15px; }
   .message, .turn-feedback { max-width: 94%; }
   .message { padding: 13px 14px; }
@@ -1198,4 +1196,9 @@ main.shell {
 
 .learner-hints .suggestions {
   padding-top: 9px;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 10px;
 }

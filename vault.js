@@ -1,23 +1,30 @@
 const OPENROUTER_KEY_FILE = new URL('./openrouter-key.enc.json', window.location.href);
 
-async function unlockOpenRouterKey(password) {
+async function unlockOpenRouterKey(password, localFile) {
   if (typeof password !== 'string' || password.length === 0) {
     throw new Error('Enter the vault passphrase.');
   }
 
-  let response;
-  try {
-    response = await fetch(OPENROUTER_KEY_FILE);
-  } catch {
-    throw new Error('Could not load the encrypted key file. Check that the site is available.');
-  }
-  if (!response.ok) throw new Error('Could not load the encrypted key file.');
-
   let vault;
-  try {
-    vault = await response.json();
-  } catch {
-    throw new Error('The encrypted key file is not valid JSON.');
+  if (localFile) {
+    try {
+      vault = JSON.parse(await localFile.text());
+    } catch {
+      throw new Error('Choose a valid openrouter-key.enc.json file.');
+    }
+  } else {
+    let response;
+    try {
+      response = await fetch(OPENROUTER_KEY_FILE);
+    } catch {
+      throw new Error('Could not fetch the encrypted key. Choose openrouter-key.enc.json below.');
+    }
+    if (!response.ok) throw new Error('Encrypted key file unavailable. Choose openrouter-key.enc.json below.');
+    try {
+      vault = await response.json();
+    } catch {
+      throw new Error('The downloaded key file is invalid. Choose openrouter-key.enc.json below.');
+    }
   }
   if (vault?.version !== 1 || !vault.salt || !vault.iv || !vault.ciphertext) {
     throw new Error('The encrypted key file has an unsupported format.');
