@@ -1202,3 +1202,17 @@ main.shell {
   display: flex;
   gap: 10px;
 }
+
+.typing-indicator {
+  align-self: flex-start;
+  margin: 2px 0 0;
+  padding: 7px 12px;
+  border-radius: 14px;
+  background: var(--green-wash);
+  color: var(--ink-soft);
+  font-size: .86rem;
+}
+
+.history-feedback .clinical-finding {
+  margin-top: 12px;
+}

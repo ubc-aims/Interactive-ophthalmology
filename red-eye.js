@@ -10,6 +10,13 @@ const clinicalCase = {
     reply: "My right eye keeps getting red.",
     opening: true
   },
+  story: {
+    id: "redness_story",
+    question: "Can you tell me more about what you’ve noticed?",
+    reply: "It’s mainly my right eye. It’s been red on and off for a few weeks, and some days it feels like there’s a bit of sand in it.",
+    feedback: "An open follow-up let Sarah describe the timing, which eye was affected, and what the irritation felt like in her own words.",
+    reveals: ["onset_when", "onset_side"]
+  },
   history: [
     {
       id: "onset",
