@@ -40,7 +40,7 @@ const discussionOpenings = {
 };
 
 let step, seenHistory, seenExam, interviewTurns, manualChecks, assessments, activeHints, examInterpretations, counsellingTurns, counsellingOpening, preceptorTurns, feedbackRequests;
-let chatKey;
+let chatKey, questionReviewRequested;
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -67,6 +67,7 @@ function start() {
   counsellingOpening = "";
   preceptorTurns = [];
   feedbackRequests = new Map();
+  questionReviewRequested = false;
   observationInput.value = "";
   manualChecks = new Set();
   assessments = new Map();
@@ -349,16 +350,19 @@ function historyFeedback(onReady) {
   panel.append(objectives, status);
 
   const missed = clinicalCase.history.filter(topic => !topicCovered(topic));
-  const observed = interviewTurns.filter(turn => turn.verdict);
-  const review = element("details");
-  review.append(element("summary", "Question-by-question review"));
-  const list = element("dl", "", "clinical-finding");
-  for (const { question, verdict, explanation } of observed) {
-    list.append(element("dt", question), element("dd", verdict + ". " + explanation));
-  }
-  if (observed.length) {
-    review.append(list);
-    panel.append(review);
+  if (interviewTurns.some(turn => turn.verdict)) {
+    const review = () => reportSection("Question-by-question review", questionReviewRows(), true);
+    if (questionReviewRequested) {
+      panel.append(review());
+    } else {
+      const request = button("Request question-by-question review", "secondary", () => {
+        questionReviewRequested = true;
+        const section = review();
+        request.replaceWith(section);
+        section.querySelector("summary").focus();
+      });
+      panel.append(request);
+    }
   }
   if (missed.length) {
     const priority = missed.find(topic => topic.priority) || missed[0];
@@ -382,7 +386,7 @@ function historyFeedback(onReady) {
   }).then(feedback => {
     status.replaceWith(assessmentDisplay("history", feedback));
   }).catch(() => {
-    status.textContent = "DeepSeek feedback is unavailable. Use the question review and next step below.";
+    status.textContent = "DeepSeek feedback is unavailable. See the suggested next step below.";
   }).finally(onReady);
   return panel;
 }
@@ -761,6 +765,13 @@ function transcriptDisplay(title, speaker, opening, turns, open = false) {
   return reportSection(title, transcriptEntries(speaker, opening, turns), open);
 }
 
+function questionReviewRows() {
+  return interviewTurns.filter(turn => turn.verdict).map(({ question, verdict, explanation }) => [
+    question,
+    verdict + ". " + explanation
+  ]);
+}
+
 function caseReport() {
   const examination = examEvidence();
   const historyTranscript = transcriptEntries(clinicalCase.patient, "", interviewTurns);
@@ -783,15 +794,13 @@ function caseReport() {
       feedback
     ]) : [];
     if (phase === "history") {
-      for (const turn of interviewTurns.filter(item => item.verdict)) {
-        rows.push([turn.question, turn.verdict + ". " + turn.explanation]);
-      }
       const missed = clinicalCase.history.filter(topic => !topicCovered(topic));
       if (missed.length) rows.push(["Topics to revisit", missed.map(topic => topic.label).join(", ")]);
     }
     if (!results) rows.push(["Assessor", "No model feedback was available for this station."]);
     sections.push([feedbackLabels[phase], rows]);
   }
+  if (questionReviewRequested) sections.push(["Question-by-question review", questionReviewRows()]);
   if (observationInput.value.trim()) sections.push(["Your observations", [["Notes", observationInput.value.trim()]]]);
   return sections;
 }
