@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>The Red Eye | Interactive Ophthalmology</title>
-  <link rel="stylesheet" href="style.css?v=8">
-  <script src="red-eye.js?v=8" defer></script>
-  <script src="vault.js?v=8" defer></script>
-  <script src="openrouter.js?v=8" defer></script>
-  <script src="assessor.js?v=8" defer></script>
-  <script src="case.js?v=8" defer></script>
+  <link rel="stylesheet" href="style.css?v=9">
+  <script src="red-eye.js?v=9" defer></script>
+  <script src="vault.js?v=9" defer></script>
+  <script src="openrouter.js?v=9" defer></script>
+  <script src="assessor.js?v=9" defer></script>
+  <script src="case.js?v=9" defer></script>
 </head>
 <body>
   <div id="case-app" class="locked" inert>
@@ -26,7 +26,12 @@
       <nav id="stages" aria-label="Case progress"></nav>
       <div class="layout">
         <section id="scene" class="card" aria-labelledby="scene-title"></section>
-        <aside id="notes" class="card" aria-labelledby="notes-title"></aside>
+        <aside id="notes" class="card" aria-labelledby="notes-title">
+          <h2 id="notes-title">Clinical notes</h2>
+          <label for="student-notes" class="composer-label">Your observations</label>
+          <textarea id="student-notes" class="student-notes" placeholder="Write your observations and differential…"></textarea>
+          <div id="case-notes-content"></div>
+        </aside>
       </div>
     </main>
     <footer class="site-footer">Developed by Karanvir Gill, Arvin Zaker</footer>

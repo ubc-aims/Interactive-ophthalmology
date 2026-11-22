@@ -33,7 +33,7 @@ The vault uses AES-256-GCM and PBKDF2-HMAC-SHA-256. OWASP lists “600,000 itera
 
 [DeepSeek V4 Flash 0731](https://openrouter.ai/deepseek/deepseek-v4-flash-0731) maps typed questions to authored responses. The model returns question IDs and a coaching verdict using [OpenRouter structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs). The browser validates the IDs, displays Sarah’s authored replies, and updates the checklist. Only new questions and the interview text needed for context go to OpenRouter.
 
-The four stages are History, Examination, Preceptor, and Counselling. History includes checking for red flags. Students write notes in the side panel and can open Hints to tick their own checklist. Observed history and exam findings are recorded separately. The assessor receives the submitted presentation or counselling message, the stage objective and criteria, evidence gathered in the case, and the student checklist separately. It receives neither the student’s scratch notes nor the passphrase.
+Stage 0 introduces the case and provides a history-taking guide. The four clinical stages are History, Examination, Preceptor, and Counselling. History includes checking for red flags. Students write notes in the side panel and can open Hints to tick their own checklist. Observed history and exam findings are recorded separately. The assessor receives the submitted presentation or counselling message, the stage objective and criteria, evidence gathered in the case, and the student checklist separately. It receives neither the student’s scratch notes nor the passphrase.
 
 ## OSCE feedback rubric
 

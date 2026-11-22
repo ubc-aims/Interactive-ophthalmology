@@ -1,7 +1,8 @@
 "use strict";
 
 const scene = document.querySelector("#scene");
-const notes = document.querySelector("#notes");
+const notes = document.querySelector("#case-notes-content");
+const observationInput = document.querySelector("#student-notes");
 const stages = document.querySelector("#stages");
 const theme = document.querySelector("#theme");
 const steps = [
@@ -27,7 +28,7 @@ const steps = [
   }
 ];
 
-let step, seenHistory, seenExam, interviewTurns, studentNotes, manualChecks, assessments, activeHints;
+let step, seenHistory, seenExam, interviewTurns, manualChecks, assessments, activeHints;
 let chatKey;
 
 function element(tag, text, className) {
@@ -46,11 +47,11 @@ function button(text, className, action) {
 
 function start() {
   notes.replaceChildren();
-  step = 0;
+  step = -1;
   seenHistory = new Map();
   interviewTurns = [];
   seenExam = new Map();
-  studentNotes = "";
+  observationInput.value = "";
   manualChecks = new Set();
   assessments = new Map();
   render();
@@ -89,19 +90,50 @@ function render() {
   });
   const progress = element("progress", "", "case-progress");
   progress.max = steps.length;
-  progress.value = step;
+  progress.value = Math.max(0, step);
   progress.setAttribute("aria-label", "Completed case stages");
-  const caption = element("p", stage ? `Stage ${step + 1} of ${steps.length}` : "Case complete", "progress-caption");
+  const label = step < 0 ? "Stage 0 · Introduction" : stage ? `Stage ${step + 1} of ${steps.length}` : "Case complete";
+  const caption = element("p", label, "progress-caption");
   stages.replaceChildren(caption, progress, list);
   scene.replaceChildren();
   activeHints = null;
   scene.classList.toggle("chat-scene", Boolean(stage) && step !== 1);
-  if (stage) stage.render();
+  if (step < 0) introduction();
+  else if (stage) stage.render();
   else debrief();
   renderNotes();
   const title = scene.querySelector("h2");
   title.focus({ preventScroll: true });
   if (title.getBoundingClientRect().top < 0) title.scrollIntoView({ block: "start" });
+}
+
+function introduction() {
+  heading("Before you begin");
+  scene.append(element("p", "You’re seeing Sarah, a 32-year-old with a red eye. Your task is to work out what’s causing it, decide how urgent it is, and explain your plan."));
+  scene.append(element("h3", "Learning objectives"));
+  const objectives = element("ol");
+  for (const [label, detail] of [
+    ["History", "Elicit the story and check for symptoms or exposures that change urgency."],
+    ["Examination", "Use the eye exam to identify where the problem is."],
+    ["Preceptor", "Present your findings, working diagnosis, alternatives, and urgency."],
+    ["Counselling", "Explain the plan and when Sarah should seek further care."]
+  ]) {
+    const item = element("li");
+    item.append(element("strong", label), element("p", detail));
+    objectives.append(item);
+  }
+  scene.append(objectives, element("h3", "A focused red-eye history"));
+  const guide = element("ul");
+  for (const detail of [
+    "Start with an open question. Ask when it began, which eye is affected, and how it has changed.",
+    "Ask about changes in vision, eye pain, and light sensitivity. Check for contact lens use, injury, chemical exposure, and recent eye procedures.",
+    "Ask about itch, discharge, and the feeling of something in the eye. Clarify any lid symptoms and what the patient has already tried."
+  ]) {
+    guide.append(element("li", detail));
+  }
+  scene.append(guide,
+    element("p", "Use Your observations to keep notes across all four stages. Each stage has optional hints."),
+    button("Start history", "primary", next));
 }
 
 function stageObjective() {
@@ -537,18 +569,6 @@ function checkItem(list, id, label, observation, status) {
 }
 
 function renderNotes() {
-  if (!notes.childElementCount) {
-    const title = element("h2", "Clinical notes");
-    title.id = "notes-title";
-    const label = element("label", "Your notes", "composer-label");
-    label.htmlFor = "student-notes";
-    const entry = element("textarea", "", "student-notes");
-    entry.id = "student-notes";
-    entry.placeholder = "Write your observations and differential…";
-    entry.value = studentNotes;
-    entry.addEventListener("input", () => { studentNotes = entry.value; });
-    notes.append(title, label, entry);
-  }
   const history = element("ul", "", "checklist");
   for (const topic of [...clinicalCase.history.filter(item => item.priority), ...clinicalCase.history.filter(item => !item.priority)]) {
     const answers = topicAnswers(topic);
@@ -561,7 +581,7 @@ function renderNotes() {
     checkItem(exam, "exam-" + id, label, found ? found[1] : purpose, found ? "Examined" : "");
   }
   const transcript = notesSection("transcript", "Interview transcript", false);
-  transcript.parentElement.hidden = step === 0;
+  transcript.parentElement.hidden = step <= 0;
   const entries = element("dl", "", "clinical-finding");
   entries.append(element("dt", clinicalCase.greeting), element("dd", clinicalCase.opening));
   for (const { question, reply } of interviewTurns) {
@@ -667,7 +687,7 @@ unlockForm.addEventListener("submit", async event => {
     app.inert = false;
     app.classList.remove("locked");
     dialog.close();
-    scene.querySelector("#draft").focus();
+    scene.querySelector("h2").focus();
   } catch (error) {
     unlockStatus.textContent = error.message;
     if (openedLocally || error.message.includes("Choose openrouter-key.enc.json")) {
