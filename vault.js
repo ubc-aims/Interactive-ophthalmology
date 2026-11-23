@@ -1,6 +1,6 @@
 const OPENROUTER_KEY_FILE = new URL('./openrouter-key.enc.json', window.location.href);
 
-async function unlockOpenRouterKey(password, localFile) {
+async function unlockOpenRouterKey(password, localFile, fromShareLink = false) {
   if (typeof password !== 'string' || password.length === 0) {
     throw new Error('Enter the vault passphrase.');
   }
@@ -26,6 +26,7 @@ async function unlockOpenRouterKey(password, localFile) {
       throw new Error('The downloaded key file is invalid. Choose openrouter-key.enc.json below.');
     }
   }
+  if (fromShareLink) vault = vault?.share;
   if (vault?.version !== 1 || !vault.salt || !vault.iv || !vault.ciphertext) {
     throw new Error('The encrypted key file has an unsupported format.');
   }

@@ -28,11 +28,10 @@ const steps = [
   }
 ];
 
-const feedbackPhases = ["history", "examination", "preceptor", "counselling"];
+const feedbackPhases = ["history", "examination", null, "counselling"];
 const feedbackLabels = {
   history: "History feedback",
   examination: "Examination feedback",
-  preceptor: "Preceptor feedback",
   counselling: "Counselling feedback"
 };
 const discussionOpenings = {
@@ -77,7 +76,8 @@ function start() {
 function next() {
   const dialog = document.querySelector("#stage-confirmation");
   const message = document.querySelector("#stage-confirmation-message");
-  const target = step < 0 ? steps[0].label : feedbackLabels[feedbackPhases[step]];
+  const feedback = feedbackPhases[step];
+  const target = feedback ? feedbackLabels[feedback] : steps[step + 1].label;
   message.textContent = "Next: " + target + ".";
   dialog.returnValue = "";
   dialog.showModal();
@@ -86,8 +86,9 @@ function next() {
 function confirmStageChange() {
   const dialog = document.querySelector("#stage-confirmation");
   if (dialog.returnValue !== "yes") return;
-  if (step < 0) advance();
-  else showFeedback(feedbackPhases[step], true);
+  const feedback = feedbackPhases[step];
+  if (feedback) showFeedback(feedback, true);
+  else advance();
 }
 
 function advance() {
@@ -106,10 +107,15 @@ function progressTrack(inFeedback = false) {
   const track = element("ol", "", "case-track");
   const entries = [
     ["Introduction", false],
-    ...steps.flatMap(({ label }, index) => [[label, false], [feedbackLabels[feedbackPhases[index]], true]]),
+    ...steps.flatMap(({ label }, index) => {
+      const feedback = feedbackPhases[index];
+      return feedback ? [[label, false], [feedbackLabels[feedback], true]] : [[label, false]];
+    }),
     ["End", false]
   ];
-  const current = step < 0 ? 0 : step >= steps.length ? entries.length - 1 : step * 2 + (inFeedback ? 2 : 1);
+  const activeLabel = step < 0 ? "Introduction" : step >= steps.length ? "End"
+    : inFeedback ? feedbackLabels[feedbackPhases[step]] : steps[step].label;
+  const current = entries.findIndex(([label]) => label === activeLabel);
   entries.forEach(([label, feedback], index) => {
     const item = element("li", "", feedback ? "feedback-stop" : "station-stop");
     const marker = element("span", feedback ? "" : label, "track-label");
@@ -532,11 +538,6 @@ function showFeedback(phase, afterStation = false) {
       transcript: counsellingTurns
     }, onReady);
   }
-  if (phase === "preceptor") {
-    scene.append(element("p", "Review your preceptor’s follow-up questions and replies."));
-    scene.append(transcriptDisplay("Preceptor conversation", "Preceptor", discussionOpenings.preceptor, preceptorTurns, true));
-    onReady();
-  }
   const actions = element("div", "", "stage-end");
   actions.append(back);
   if (afterStation) actions.append(proceed);
@@ -748,14 +749,6 @@ function renderNotes() {
     const found = seenExam.get(id);
     checkItem(exam, "exam-" + id, label, found ? (photos ? examInterpretations.get(id) : found[1]) : purpose, found ? "Examined" : "");
   }
-  const transcript = notesSection("transcript", "Interview transcript", false);
-  transcript.parentElement.hidden = step <= 0;
-  const entries = element("dl", "", "clinical-finding");
-
-  for (const { question, reply } of interviewTurns) {
-    entries.append(element("dt", question), element("dd", reply));
-  }
-  transcript.replaceChildren(entries);
   const hints = notesSection("hints", "Hints", false);
   const details = hints.parentElement;
   details.className = "learner-hints";
@@ -776,12 +769,6 @@ function renderNotes() {
 
 }
 
-function transcriptEntries(speaker, opening, turns) {
-  const rows = opening ? [[speaker, opening]] : [];
-  for (const { question, reply } of turns) rows.push(["You", question], [speaker, reply]);
-  return rows;
-}
-
 function reportSection(title, rows, open = false) {
   const details = element("details");
   details.open = open;
@@ -790,10 +777,6 @@ function reportSection(title, rows, open = false) {
   for (const [label, text] of rows) list.append(element("dt", label), element("dd", text));
   details.append(list);
   return details;
-}
-
-function transcriptDisplay(title, speaker, opening, turns, open = false) {
-  return reportSection(title, transcriptEntries(speaker, opening, turns), open);
 }
 
 function questionReviewRows() {
@@ -805,18 +788,12 @@ function questionReviewRows() {
 
 function caseReport() {
   const examination = examEvidence();
-  const historyTranscript = transcriptEntries(clinicalCase.patient, "", interviewTurns);
   const examRows = examination.selected.map(({ label, finding, interpretation }) => [
     label,
     finding + (interpretation.trim() ? "\nYour interpretation: " + interpretation.trim() : "")
   ]);
   if (examination.missed.length) examRows.push(["Core components missed", examination.missed.join(", ")]);
-  const sections = [
-    ["History transcript", historyTranscript],
-    ["Examination record", examRows],
-    ["Preceptor transcript", transcriptEntries("Preceptor", discussionOpenings.preceptor, preceptorTurns)],
-    ["Counselling transcript", transcriptEntries(clinicalCase.patient, counsellingOpening, counsellingTurns)]
-  ];
+  const sections = [["Examination record", examRows]];
   const labels = { met: "Met", partial: "Develop further", missing: "Missing" };
   for (const phase of ["history", "examination", "counselling"]) {
     const results = assessments.get(phase);
@@ -909,15 +886,14 @@ const openedLocally = window.location.protocol === "file:" && !globalThis.embedd
 localKeyPicker.hidden = !openedLocally;
 
 dialog.addEventListener("cancel", event => event.preventDefault());
-unlockForm.addEventListener("submit", async event => {
-  event.preventDefault();
-  if (unlockButton.disabled || !password.value) return;
+async function unlockCase(credential, fromShareLink = false) {
+  if (unlockButton.disabled || !credential) return;
   unlockButton.disabled = true;
   unlockStatus.textContent = "Unlocking…";
   try {
     const file = localKey.files?.[0];
     if (openedLocally && !file) throw new Error("Choose openrouter-key.enc.json from the project folder.");
-    chatKey = await unlockOpenRouterKey(password.value, file);
+    chatKey = await unlockOpenRouterKey(credential, file, fromShareLink);
     password.value = "";
     localKey.value = "";
     app.inert = false;
@@ -925,7 +901,9 @@ unlockForm.addEventListener("submit", async event => {
     dialog.close();
     scene.querySelector("h2").focus();
   } catch (error) {
-    unlockStatus.textContent = error.message;
+    unlockStatus.textContent = fromShareLink
+      ? "This share link could not unlock the case. Enter the passphrase."
+      : error.message;
     if (openedLocally || error.message.includes("Choose openrouter-key.enc.json")) {
       localKeyPicker.hidden = false;
       localKey.focus();
@@ -935,8 +913,20 @@ unlockForm.addEventListener("submit", async event => {
   } finally {
     unlockButton.disabled = false;
   }
+}
+
+unlockForm.addEventListener("submit", event => {
+  event.preventDefault();
+  return unlockCase(password.value);
 });
 
 document.querySelector("#stage-confirmation").addEventListener("close", confirmStageChange);
 start();
 dialog.showModal();
+const shareFragment = window.location.hash;
+if (shareFragment?.startsWith("#access=")) {
+  // Keep the credential out of subsequent navigation and copied page URLs.
+  const token = shareFragment.slice("#access=".length);
+  window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  unlockCase(token, true);
+}

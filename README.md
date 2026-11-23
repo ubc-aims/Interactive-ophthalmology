@@ -49,7 +49,7 @@ The AAO adult evaluation guideline lists “Visual acuity with current correctio
 
 ## Progress and report
 
-The progress track includes Introduction, the four stations, feedback stops, and End. Request feedback previews the current station’s feedback. Finishing the station opens its feedback stop and then allows the learner to advance. The preceptor stop shows the feedback given in the chat. End displays and downloads a Markdown report with the three conversations, exam sequence and interpretations, recorded feedback, and learner observations. The report is generated in the browser.
+The progress track includes Introduction, the four stations, feedback stops, and End. Request feedback previews the current station’s feedback. History, Examination, and Counselling open their feedback stops when finished. Finish Presentation goes directly to Counselling after confirmation. End displays and downloads the learner’s observations, exam record, and feedback. The report is generated in the browser.
 
 The AOCLE red-eye pocket guide asks whether symptoms are “worse, better, or the same” under **Chief Complaint**. This supports a distinct progression question alongside onset, vision change, and light sensitivity. Live model trials check dialogue and rubric behavior when prompts or case facts change. Frontend-only edits can be verified with local interaction tests. [AOCLE red-eye pocket guide](https://aocle.org/wp-content/uploads/2022/09/Pocket-Guide-CL-related-red-eye.pdf)
 

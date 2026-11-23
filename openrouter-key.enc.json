@@ -2,5 +2,11 @@
   "version": 1,
   "salt": "AsLi2DnVTFXhiF2pDT6kLQ==",
   "iv": "fp0S9Fpv4o1FhxGK",
-  "ciphertext": "kuQJ00GMl67ETCSmYIQSq51H7D9j51GJli4LIFg0aDZRQ38upNYgSGv//0HO0yQCihAeXqBA33IvvD0GVi+7Ji42dpBOVXwDInfB0XsCtn7dxi6CdnJ76iw="
+  "ciphertext": "kuQJ00GMl67ETCSmYIQSq51H7D9j51GJli4LIFg0aDZRQ38upNYgSGv//0HO0yQCihAeXqBA33IvvD0GVi+7Ji42dpBOVXwDInfB0XsCtn7dxi6CdnJ76iw=",
+  "share": {
+    "version": 1,
+    "salt": "+JKE8cHh/fHkkmfk0ZJNXw==",
+    "iv": "2dIk9TrNUW8JnyKA",
+    "ciphertext": "1s5EXUC8ZcRxSECV/+fzDSm5ItSFc6vNkZGoHWgHpXqUQeQ3dacE9TE/zHimdZrRXHhiphqTJ0zbj7m896Bb0kAfzmUeeEi64HN87MunwIR7ys7nSNEY7bg="
+  }
 }
