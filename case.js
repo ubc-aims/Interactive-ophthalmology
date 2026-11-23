@@ -602,7 +602,7 @@ function discussion(phase) {
   send.disabled = true;
   const status = element("p", "", "chat-status");
   status.setAttribute("role", "status");
-  const proceed = button(isPreceptor ? "Finish presentation" : "Finish counselling", "secondary", next);
+  const proceed = button(isPreceptor ? "Finish presentation" : "Finish counselling", isPreceptor ? "primary" : "secondary", next);
   const end = element("div", "", "stage-end");
   proceed.disabled = !isPreceptor;
   const request = isPreceptor ? null : button("Request feedback", "secondary", () => showFeedback("counselling"));
@@ -610,13 +610,14 @@ function discussion(phase) {
   end.append(proceed);
   const transcript = isPreceptor ? preceptorTurns : counsellingTurns;
   let ready = false;
+  let presentationComplete = false;
   let pending = false;
   draft.addEventListener("input", () => { send.disabled = pending || !draft.value.trim(); });
   enterToSend(draft, composer);
   composer.addEventListener("submit", async event => {
     event.preventDefault();
     const text = draft.value.trim();
-    if (!text || pending || !chatKey) return;
+    if (!text || pending || presentationComplete || !chatKey) return;
     const { turn, waiting } = sentMessage(log, text, speaker + " is typing…");
     draft.value = "";
     pending = true;
@@ -640,6 +641,8 @@ function discussion(phase) {
       waiting.remove();
       turn.append(chatMessage(speaker, reply.reply, "patient"));
       ready = true;
+      presentationComplete = isPreceptor && reply.ready;
+      if (presentationComplete) composer.remove();
       log.scrollTop = log.scrollHeight;
       status.textContent = "";
     } catch (error) {
@@ -653,7 +656,8 @@ function discussion(phase) {
       if (request) request.disabled = false;
       draft.readOnly = false;
       send.disabled = !draft.value.trim();
-      draft.focus();
+      if (presentationComplete) proceed.focus();
+      else draft.focus();
     }
   });
   const hints = element("ul");
