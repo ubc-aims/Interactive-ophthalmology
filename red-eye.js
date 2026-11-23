@@ -156,7 +156,7 @@ const clinicalCase = {
         credit: "Brice Critser, CRA (photographer) and Jesse Vislisel, MD (contributor)"
       }] },
     { id: "vitals", label: "Vital signs", optional: true, purpose: "Review systemic observations if needed.", reply: "Systemic vital signs are not provided in this case." },
-    { id: "pressure", label: "Intraocular pressure", optional: true, purpose: "Consider pressure measurement when the history or exam raises concern for elevated pressure and it is safe to measure.", reply: "An intraocular pressure measurement is not provided in this case." },
+    { id: "pressure", label: "Intraocular pressure", optional: true, purpose: "Consider pressure measurement when the history or exam raises concern for elevated pressure and it is safe to measure.", reply: "Tonometry: right eye 15 mmHg, left eye 15 mmHg." },
     { id: "dilation", label: "Dilated fundus exam", optional: true, purpose: "Consider a posterior examination if the symptoms or findings point beyond the anterior eye.", reply: "A dilated fundus examination is not provided in this case." }
   ],
   checkpoints: {
