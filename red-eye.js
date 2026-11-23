@@ -117,11 +117,12 @@ const clinicalCase = {
     { id: "lids", label: "Lids and lashes", spot: [47, 32], marker: "L", purpose: "Locate any bump and inspect the lash bases and gland openings.", reply: "There is a firm nodule within the right upper lid, away from the lash line. It is minimally tender. There are crusts at the lashes and plugged meibomian gland openings.",
       photos: [
         {
-          alt: "Close-up of an eyelid with a localized raised area",
-          label: "Lid contour",
-          src: "assets/exam-lid.jpg",
-          source: "https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/Chalazion-2-.html",
-          credit: "Jordan Graff, MD"
+          alt: "Close-up of the right upper eyelid with the eye closed",
+          label: "Right upper lid",
+          src: "assets/exam-lid.jpg?v=24",
+          source: "https://commons.wikimedia.org/wiki/File:ChalazionR.jpg",
+          credit: "Poupig · Wikimedia Commons",
+          license: ["CC BY-SA 3.0", "https://creativecommons.org/licenses/by-sa/3.0/"]
         },
         {
           alt: "Close-up of eyelashes with visible flakes at their bases",

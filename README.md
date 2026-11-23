@@ -20,10 +20,10 @@ The supplied Sarah Thomas captures informed the lid and ocular surface presentat
 
 ## Examination photos
 
-The lid examination uses two original University of Iowa EyeRounds atlas images, shown at their original aspect ratios as teaching examples. The module links to the atlas if an image is unavailable. Both photos are licensed [CC BY-NC-ND 3.0](https://creativecommons.org/licenses/by-nc-nd/3.0/).
+The lid examination uses separate reference photos for the right upper lid and lash bases. Both images are unmodified.
 
-- Jordan Graff, MD. [Lid contour photograph](https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/Chalazion-2-.html)
-- Cindy Montague, CRA (photographer), and Jesse Vislisel, MD (contributor). [Lash base photograph](https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/blepharitis/index.htm)
+- Poupig. [Right upper lid photograph](https://commons.wikimedia.org/wiki/File:ChalazionR.jpg) · [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
+- Cindy Montague, CRA (photographer), and Jesse Vislisel, MD (contributor). [Lash base photograph](https://webeye.ophth.uiowa.edu/eyeforum/atlas/pages/blepharitis/index.htm) · [CC BY-NC-ND 3.0](https://creativecommons.org/licenses/by-nc-nd/3.0/)
 
 ## Enable free-form chat
 
